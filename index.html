@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Supply Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #ffffff; --bg2: #f5f5f3; --bg3: #ebebea;
+    --text: #1a1a18; --text2: #6b6b67; --text3: #9b9b96;
+    --border: rgba(0,0,0,0.12); --border2: rgba(0,0,0,0.2);
+    --blue: #185FA5; --blue-bg: #E6F1FB; --blue-text: #0C447C;
+    --green: #3B6D11; --green-bg: #EAF3DE; --green-text: #27500A;
+    --purple-bg: #EEEDFE; --purple-text: #3C3489;
+    --red: #A32D2D; --red-bg: #FCEBEB; --red-text: #791F1F;
+    --amber-bg: #FAEEDA; --amber-text: #633806;
+    --radius: 8px; --radius-lg: 12px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1a; --bg2: #262624; --bg3: #2f2f2c;
+      --text: #e8e6de; --text2: #9b9b96; --text3: #6b6b67;
+      --border: rgba(255,255,255,0.1); --border2: rgba(255,255,255,0.2);
+      --blue-bg: #0c2d52; --blue-text: #85B7EB;
+      --green-bg: #1a2f09; --green-text: #97C459;
+      --purple-bg: #1e1c42; --purple-text: #AFA9EC;
+      --red-bg: #2d1010; --red-text: #F09595;
+      --amber-bg: #2d2208; --amber-text: #EF9F27;
+    }
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+  .app { max-width: 480px; margin: 0 auto; padding: 0 16px 80px; }
+  .header { padding: 20px 0 12px; display: flex; align-items: center; gap: 10px; }
+  .header h1 { font-size: 20px; font-weight: 600; flex: 1; }
+  .back-btn { background: none; border: none; cursor: pointer; color: var(--text2); font-size: 15px; padding: 4px 0; display: flex; align-items: center; gap: 4px; }
+  .back-btn:hover { color: var(--text); }
+  .seg { display: flex; border: 0.5px solid var(--border2); border-radius: var(--radius); overflow: hidden; margin-bottom: 16px; }
+  .seg-btn { flex: 1; padding: 9px; font-size: 13px; border: none; background: transparent; cursor: pointer; color: var(--text2); }
+  .seg-btn.active { background: var(--bg2); color: var(--text); font-weight: 600; }
+  .seg-btn:not(:last-child) { border-right: 0.5px solid var(--border); }
+  .tabs { display: flex; gap: 5px; margin-bottom: 16px; }
+  .tab { flex: 1; padding: 8px 3px; font-size: 11px; border: 0.5px solid var(--border2); border-radius: var(--radius); background: transparent; cursor: pointer; color: var(--text2); text-align: center; }
+  .tab.active { background: var(--bg2); color: var(--text); font-weight: 600; border-color: var(--border2); }
+  .card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 14px 16px; margin-bottom: 10px; }
+  .card-row { display: flex; align-items: center; gap: 12px; cursor: pointer; }
+  .card-row:hover .card-name { text-decoration: underline; }
+  .avatar { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 13px; flex-shrink: 0; }
+  .avatar-sq { border-radius: 10px; }
+  .card-info { flex: 1; min-width: 0; }
+  .card-name { font-weight: 600; font-size: 15px; }
+  .card-meta { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .chevron { color: var(--text3); font-size: 20px; }
+  .pill { font-size: 10px; padding: 2px 8px; border-radius: 99px; display: inline-block; }
+  .pill-dealer { background: var(--blue-bg); color: var(--blue-text); }
+  .pill-collision { background: var(--purple-bg); color: var(--purple-text); }
+  .badge { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 99px; }
+  .badge-Parts { background: var(--blue-bg); color: var(--blue-text); }
+  .badge-Fluids { background: var(--green-bg); color: var(--green-text); }
+  .badge-Tools { background: var(--amber-bg); color: var(--amber-text); }
+  .badge-Cleaning { background: #E1F5EE; color: #085041; }
+  .badge-Safety { background: #FAECE7; color: #712B13; }
+  .badge-Other { background: var(--bg2); color: var(--text2); }
+  .form-group { margin-bottom: 14px; }
+  .form-group label { font-size: 13px; color: var(--text2); display: block; margin-bottom: 5px; }
+  .form-group input, .form-group select, .form-group textarea {
+    width: 100%; padding: 10px 12px; border: 0.5px solid var(--border2);
+    border-radius: var(--radius); background: var(--bg); color: var(--text);
+    font-size: 14px; font-family: inherit; appearance: none;
+  }
+  .form-group textarea { min-height: 100px; resize: vertical; font-family: monospace; font-size: 12px; }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: 2px solid var(--blue); outline-offset: -1px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .btn { width: 100%; padding: 12px; font-size: 14px; font-weight: 600; cursor: pointer; border-radius: var(--radius); border: 0.5px solid var(--border2); background: var(--bg2); color: var(--text); font-family: inherit; margin-top: 6px; }
+  .btn:hover { background: var(--bg3); }
+  .btn:active { transform: scale(0.98); }
+  .btn-primary { background: var(--blue); color: #E6F1FB; border-color: var(--blue); }
+  .btn-primary:hover { background: var(--blue-text); }
+  .btn-success { background: var(--green); color: var(--green-bg); border-color: var(--green); }
+  .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px; }
+  .btn-grid .btn { margin-top: 0; }
+  .order-card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 12px 14px; margin-bottom: 8px; }
+  .order-hdr { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+  .order-name { font-weight: 600; font-size: 14px; }
+  .order-price { font-weight: 600; font-size: 14px; color: var(--blue); }
+  .order-meta { font-size: 12px; color: var(--text2); display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .del-btn { background: none; border: none; cursor: pointer; color: var(--text3); font-size: 16px; padding: 0 2px; line-height: 1; }
+  .del-btn:hover { color: var(--red); }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .stat { background: var(--bg2); border-radius: var(--radius); padding: 14px; }
+  .stat-label { font-size: 11px; color: var(--text2); margin-bottom: 4px; }
+  .stat-value { font-size: 22px; font-weight: 700; }
+  .week-label { font-size: 12px; color: var(--text2); margin: 12px 0 6px; font-weight: 600; }
+  .divider { border: none; border-top: 0.5px solid var(--border); margin: 10px 0; }
+  .info-box { background: var(--bg2); border-radius: var(--radius); padding: 10px 14px; font-size: 13px; color: var(--text2); margin-bottom: 14px; line-height: 1.5; }
+  .reorder-card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 12px 14px; margin-bottom: 8px; }
+  .empty { text-align: center; color: var(--text2); font-size: 14px; padding: 40px 0; line-height: 1.6; }
+  .loading { text-align: center; color: var(--text2); font-size: 14px; padding: 30px 0; }
+  .spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid var(--border2); border-top-color: var(--blue); border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 8px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .preview-item { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 0.5px solid var(--border); font-size: 13px; }
+  .preview-item:last-child { border-bottom: none; }
+  .preview-name { flex: 1; font-weight: 500; }
+  .section-hdr { font-size: 13px; font-weight: 600; color: var(--text2); margin: 14px 0 8px; }
+  .breadcrumb { font-size: 12px; color: var(--text2); margin-bottom: 2px; }
+  .screen { display: none; }
+  .screen.active { display: block; }
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 10px 20px; border-radius: 99px; font-size: 13px; font-weight: 500; z-index: 999; opacity: 0; transition: opacity 0.2s; pointer-events: none; white-space: nowrap; }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HOME -->
+  <div id="s-home" class="screen active">
+    <div class="header"><h1>My accounts</h1></div>
+    <div class="seg">
+      <button class="seg-btn active" onclick="setFilter('all')">All</button>
+      <button class="seg-btn" onclick="setFilter('dealership')">Dealerships</button>
+      <button class="seg-btn" onclick="setFilter('collision')">Collision</button>
+    </div>
+    <div id="account-list"><div class="loading"><span class="spinner"></span>Loading...</div></div>
+    <div class="btn-grid">
+      <button class="btn" onclick="showScreen('s-add-account','dealership')">+ Dealership</button>
+      <button class="btn btn-primary" onclick="showScreen('s-add-account','collision')">+ Collision center</button>
+    </div>
+  </div>
+
+  <!-- ADD ACCOUNT -->
+  <div id="s-add-account" class="screen">
+    <div class="header">
+      <button class="back-btn" onclick="goHome()">&#8592; Back</button>
+      <h1 id="add-acct-title">Add account</h1>
+    </div>
+    <div id="collision-note" class="info-box" style="display:none;">You can add individual locations after saving.</div>
+    <div class="form-group"><label>Name</label><input type="text" id="a-name" placeholder="e.g. Valley Ford"/></div>
+    <div class="form-group"><label>Contact name (optional)</label><input type="text" id="a-contact"/></div>
+    <div class="form-group"><label>Phone (optional)</label><input type="text" id="a-phone"/></div>
+    <div class="form-group"><label>Notes (optional)</label><input type="text" id="a-notes"/></div>
+    <button class="btn btn-primary" onclick="saveAccount()">Save</button>
+  </div>
+
+  <!-- COLLISION CENTER -->
+  <div id="s-collision" class="screen">
+    <div class="header">
+      <button class="back-btn" onclick="goHome()">&#8592; All accounts</button>
+      <h1 id="collision-title"></h1>
+    </div>
+    <div class="section-hdr">Locations</div>
+    <div id="loc-list"><div class="loading"><span class="spinner"></span>Loading...</div></div>
+    <button class="btn btn-primary" onclick="showScreen('s-add-location')">+ Add location</button>
+  </div>
+
+  <!-- ADD LOCATION -->
+  <div id="s-add-location" class="screen">
+    <div class="header">
+      <button class="back-btn" onclick="showScreen('s-collision')">&#8592; Back</button>
+      <h1>Add location</h1>
+    </div>
+    <div class="form-group"><label>Location name</label><input type="text" id="l-name" placeholder="e.g. North location"/></div>
+    <div class="form-group"><label>Address (optional)</label><input type="text" id="l-address"/></div>
+    <div class="form-group"><label>Contact name (optional)</label><input type="text" id="l-contact"/></div>
+    <div class="form-group"><label>Phone (optional)</label><input type="text" id="l-phone"/></div>
+    <button class="btn btn-primary" onclick="saveLocation()">Save location</button>
+  </div>
+
+  <!-- ORDERS -->
+  <div id="s-orders" class="screen">
+    <div class="header">
+      <button class="back-btn" id="orders-back-btn" onclick="ordersBack()">&#8592; Back</button>
+      <div style="flex:1;">
+        <div class="breadcrumb" id="orders-breadcrumb"></div>
+        <h1 id="orders-title" style="font-size:18px;"></h1>
+      </div>
+    </div>
+    <div class="tabs">
+      <button class="tab active" onclick="showOrderTab('import')">Import</button>
+      <button class="tab" onclick="showOrderTab('add')">+ Add</button>
+      <button class="tab" onclick="showOrderTab('history')">History</button>
+      <button class="tab" onclick="showOrderTab('reorder')">Reorder</button>
+      <button class="tab" onclick="showOrderTab('summary')">Summary</button>
+    </div>
+
+    <div id="otab-import">
+      <div class="info-box">Paste your order from the company app — AI extracts all items automatically.</div>
+      <div id="import-paste-view">
+        <div class="form-group"><label>Order date</label><input type="date" id="import-date"/></div>
+        <div class="form-group"><label>Paste order text</label><textarea id="import-text" placeholder="Paste your order here..."></textarea></div>
+        <button class="btn btn-primary" onclick="parseImport()">Parse with AI</button>
+      </div>
+      <div id="import-loading" style="display:none;"><div class="loading"><span class="spinner"></span>Reading your order...</div></div>
+      <div id="import-preview" style="display:none;">
+        <div class="section-hdr">Review — uncheck to skip</div>
+        <div id="preview-list"></div>
+        <div class="btn-grid" style="margin-top:12px;">
+          <button class="btn" onclick="resetImport()">&#8592; Back</button>
+          <button class="btn btn-success" onclick="confirmImport()">Import ✓</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="otab-add" style="display:none;">
+      <div class="form-group"><label>Item name</label><input type="text" id="item-name" placeholder="e.g. Oil filter"/></div>
+      <div class="form-group"><label>Category</label>
+        <select id="item-cat"><option>Parts</option><option>Fluids</option><option>Tools</option><option>Cleaning</option><option>Safety</option><option>Other</option></select>
+      </div>
+      <div class="row2">
+        <div class="form-group"><label>Quantity</label><input type="number" id="item-qty" placeholder="1" min="1" step="1"/></div>
+        <div class="form-group"><label>Price ($)</label><input type="number" id="item-price" placeholder="0.00" min="0" step="0.01"/></div>
+      </div>
+      <div class="form-group"><label>Date</label><input type="date" id="item-date"/></div>
+      <div class="form-group"><label>Notes (optional)</label><input type="text" id="item-notes"/></div>
+      <button class="btn btn-primary" onclick="addOrder()">Save order</button>
+    </div>
+
+    <div id="otab-history" style="display:none;">
+      <div class="form-group">
+        <select id="filter-cat" onchange="renderHistory()">
+          <option value="">All categories</option>
+          <option>Parts</option><option>Fluids</option><option>Tools</option><option>Cleaning</option><option>Safety</option><option>Other</option>
+        </select>
+      </div>
+      <div id="history-list"></div>
+    </div>
+
+    <div id="otab-reorder" style="display:none;">
+      <div class="info-box">AI suggestions based on this account's order history.</div>
+      <div id="reorder-loading" style="display:none;"><div class="loading"><span class="spinner"></span>Analyzing orders...</div></div>
+      <div id="reorder-list"></div>
+      <button class="btn" style="margin-top:4px;" onclick="loadReorder()">Refresh suggestions</button>
+    </div>
+
+    <div id="otab-summary" style="display:none;">
+      <div class="stats" id="stats-grid"></div>
+      <div id="top-items"></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://slzxwtcarpbusdfqjhzt.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsenh3dGNhcnBidXNkZnFqaHp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5Mzc4OTIsImV4cCI6MjA5MzUxMzg5Mn0.Tp6O5k0R1UpLRqB6p7cPkjBjXdPXxmVgPdFK1aSjERM';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let currentFilter = 'all';
+let currentAccountId = null;
+let currentLocationId = null;
+let currentOrdersBackTarget = 'home';
+let parsedItems = [];
+let accounts = [];
+let currentOrders = [];
+
+const avatarColors = [
+  {bg:'#E6F1FB',color:'#0C447C'},{bg:'#EAF3DE',color:'#27500A'},{bg:'#FAEEDA',color:'#633806'},
+  {bg:'#E1F5EE',color:'#085041'},{bg:'#FAECE7',color:'#712B13'},{bg:'#F1EFE8',color:'#444441'},
+  {bg:'#B5D4F4',color:'#042C53'}
+];
+const collisionColors = [{bg:'#EEEDFE',color:'#3C3489'},{bg:'#CECBF6',color:'#26215C'},{bg:'#AFA9EC',color:'#26215C'}];
+
+function todayStr() { return new Date().toISOString().slice(0,10); }
+function initials(n) { return (n||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase(); }
+function getWeekKey(ds) {
+  const d=new Date(ds+'T12:00:00'),day=d.getDay(),diff=d.getDate()-day+(day===0?-6:1);
+  return new Date(d.setDate(diff)).toISOString().slice(0,10);
+}
+function weekLabel(k) { return 'Week of '+new Date(k+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2500);
+}
+
+function showScreen(id, data) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  const el = document.getElementById(id);
+  if (el) el.classList.add('active');
+  window.scrollTo(0,0);
+  if (id==='s-add-account' && data) {
+    document.getElementById('add-acct-title').textContent = data==='collision' ? 'Add collision center' : 'Add dealership';
+    currentAddType = data;
+    document.getElementById('collision-note').style.display = data==='collision' ? '' : 'none';
+    ['a-name','a-contact','a-phone','a-notes'].forEach(i=>document.getElementById(i).value='');
+  }
+  if (id==='s-collision') renderLocationList();
+}
+
+function goHome() { showScreen('s-home'); loadAccounts(); }
+
+function setFilter(f) {
+  currentFilter = f;
+  document.querySelectorAll('.seg-btn').forEach((b,i)=>b.classList.toggle('active',['all','dealership','collision'][i]===f));
+  renderAccountList();
+}
+
+async function loadAccounts() {
+  const { data, error } = await sb.from('accounts').select('*').order('created_at');
+  if (error) { showToast('Error loading accounts'); return; }
+  accounts = data || [];
+  renderAccountList();
+}
+
+function renderAccountList() {
+  const list = document.getElementById('account-list');
+  let filtered = accounts;
+  if (currentFilter !== 'all') filtered = accounts.filter(a=>a.type===currentFilter);
+  if (!filtered.length) { list.innerHTML='<div class="empty">No accounts yet.<br>Add your first one below.</div>'; return; }
+  list.innerHTML = filtered.map(a => {
+    const isC = a.type==='collision';
+    const c = isC ? collisionColors[a.color_idx%3] : avatarColors[a.color_idx%7];
+    return `<div class="card">
+      <div class="card-row" onclick="${isC?'openCollision':'openDealer'}(${a.id})">
+        <div class="avatar ${isC?'avatar-sq':''}" style="background:${c.bg};color:${c.color};">${initials(a.name)}</div>
+        <div class="card-info">
+          <div class="card-name">${a.name}</div>
+          <div class="card-meta"><span class="pill pill-${a.type}">${isC?'Collision center':'Dealership'}</span>${a.contact?' · '+a.contact:''}</div>
+        </div>
+        <span class="chevron">›</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function saveAccount() {
+  const name = document.getElementById('a-name').value.trim();
+  if (!name) { document.getElementById('a-name').focus(); return; }
+  const type = currentAddType;
+  const colorIdx = accounts.filter(a=>a.type===type).length;
+  const { data, error } = await sb.from('accounts').insert({
+    name, type, color_idx: colorIdx,
+    contact: document.getElementById('a-contact').value.trim(),
+    phone: document.getElementById('a-phone').value.trim(),
+    notes: document.getElementById('a-notes').value.trim()
+  }).select().single();
+  if (error) { showToast('Error saving'); return; }
+  accounts.push(data);
+  showToast('Account saved!');
+  if (type==='collision') { currentAccountId=data.id; document.getElementById('collision-title').textContent=data.name; showScreen('s-collision'); }
+  else goHome();
+}
+
+function openDealer(id) {
+  currentAccountId = parseInt(id); currentLocationId = null; currentOrdersBackTarget = 'home';
+  const a = accounts.find(x=>x.id===parseInt(id));
+  document.getElementById('orders-breadcrumb').textContent = '';
+  document.getElementById('orders-title').textContent = a.name;
+  document.getElementById('orders-back-btn').textContent = '← All accounts';
+  setupOrderScreen();
+}
+function openCollision(id) {
+  currentAccountId = parseInt(id);
+  const a = accounts.find(x=>x.id===parseInt(id));
+  document.getElementById('collision-title').textContent = a.name;
+  showScreen('s-collision');
+}
+async function renderLocationList() {
+  const el = document.getElementById('loc-list');
+  el.innerHTML = '<div class="loading"><span class="spinner"></span>Loading...</div>';
+  const { data } = await sb.from('locations').select('*').eq('account_id', currentAccountId).order('created_at');
+  const locs = data || [];
+  if (!locs.length) { el.innerHTML='<div class="empty">No locations yet.<br>Add your first location below.</div>'; return; }
+  el.innerHTML = locs.map(l=>`<div class="card">
+    <div class="card-row" onclick="openLocation(${l.id},'${l.name.replace(/'/g,"\\'")}')">
+      <div class="avatar avatar-sq" style="background:#EEEDFE;color:#3C3489;font-size:12px;">${initials(l.name)}</div>
+      <div class="card-info"><div class="card-name">${l.name}</div><div class="card-meta">${l.address||l.contact||''}</div></div>
+      <span class="chevron">›</span>
+    </div>
+  </div>`).join('');
+}
+async function saveLocation() {
+  const name = document.getElementById('l-name').value.trim();
+  if (!name) { document.getElementById('l-name').focus(); return; }
+  const { error } = await sb.from('locations').insert({
+    account_id: currentAccountId, name,
+    address: document.getElementById('l-address').value.trim(),
+    contact: document.getElementById('l-contact').value.trim(),
+    phone: document.getElementById('l-phone').value.trim()
+  });
+  if (error) { showToast('Error saving location'); return; }
+  showToast('Location saved!');
+  showScreen('s-collision');
+}
+function openLocation(locId, locName) {
+  currentLocationId = locId; currentOrdersBackTarget = 'collision';
+  const a = accounts.find(x=>x.id===currentAccountId);
+  document.getElementById('orders-breadcrumb').textContent = a.name;
+  document.getElementById('orders-title').textContent = locName;
+  document.getElementById('orders-back-btn').textContent = '← '+a.name;
+  setupOrderScreen();
+}
+function ordersBack() {
+  if (currentOrdersBackTarget==='collision') showScreen('s-collision');
+  else goHome();
+}
+
+function setupOrderScreen() {
+  document.getElementById('item-date').value = todayStr();
+  document.getElementById('import-date').value = todayStr();
+  resetImport();
+  document.getElementById('import-text').value = '';
+  showScreen('s-orders');
+  showOrderTab('import');
+}
+
+function showOrderTab(tab) {
+  ['import','add','history','reorder','summary'].forEach(t=>{
+    document.getElementById('otab-'+t).style.display = t===tab?'':'none';
+  });
+  document.querySelectorAll('.tab').forEach((el,i)=>{
+    el.classList.toggle('active',['import','add','history','reorder','summary'][i]===tab);
+  });
+  if (tab==='history') renderHistory();
+  if (tab==='summary') renderSummary();
+  if (tab==='reorder') loadReorder();
+}
+
+function guessCategory(name) {
+  const n = name.toUpperCase();
+  if (n.match(/OIL|FLUID|GREASE|LUBRIC|CLEANER|SOLVENT|ANTIFREEZE|COOLANT/)) return 'Fluids';
+  if (n.match(/TAPE|SPRAYER|BRUSH|CLEAN|WASH|POLISH|DETERG/)) return 'Cleaning';
+  if (n.match(/GLOVE|EYEWEAR|GOGGLE|SAFETY|RESPIRAT|SHIELD/)) return 'Safety';
+  if (n.match(/WRENCH|SOCKET|PLIER|HAMMER|DRILL|TOOL|SCREWDRIVER/)) return 'Tools';
+  if (n.match(/BOLT|SCREW|WASHER|NUT|CLAMP|CLIP|RIVET|RETAINER|CABLE TIE|NIPPLE|CAP|CONNECT/)) return 'Parts';
+  return 'Other';
+}
+
+function parseInvoiceText(text) {
+  const lines = text.split('
+').map(function(l) { return l.trim(); }).filter(Boolean);
+  const items = [];
+  const skipWords = ['Items Ordered','Product Name','SKU','UOM','Price','Qty','Subtotal','Shipping','Estimated','Total'];
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    const isSkip = skipWords.some(function(w) { return line.indexOf(w) === 0; });
+    if (isSkip) { i++; continue; }
+    const isPrice = line.indexOf('$') === 0;
+    const isOrdered = line.indexOf('Ordered') === 0;
+    const isSKU = /^[A-Z]{2,8}[0-9]/.test(line) && line.split(' ').length <= 2;
+    const isHeader = /^[A-Z]{2,5}$/.test(line);
+    if (!isPrice && !isOrdered && !isSKU && !isHeader && line.length > 4 && line === line.toUpperCase()) {
+      const name = line;
+      let price = 0, qty = 1;
+      for (let j = i+1; j < Math.min(i+9, lines.length); j++) {
+        const l2 = lines[j];
+        if (l2.indexOf('$') === 0 && price === 0) {
+          const p = parseFloat(l2.replace('$',''));
+          if (!isNaN(p)) price = p;
+        }
+        if (l2.indexOf('Ordered') === 0) {
+          const q = parseInt(l2.replace('Ordered',''));
+          if (!isNaN(q)) qty = q;
+        }
+      }
+      if (price > 0) {
+        items.push({ name: name, qty: qty, price: price, category: guessCategory(name) });
+        i++;
+        let skipped = 0;
+        while (i < lines.length && skipped < 7) {
+          if (lines[i].indexOf('Ordered') === 0) { i++; break; }
+          i++; skipped++;
+        }
+        continue;
+      }
+    }
+    i++;
+  }
+  return items;
+}
+
+async function parseImport() {
+  const text = document.getElementById('import-text').value.trim(); if (!text) return;
+  document.getElementById('import-paste-view').style.display='none';
+  document.getElementById('import-loading').style.display='';
+  try {
+    parsedItems = parseInvoiceText(text);
+    if (!parsedItems.length) throw new Error('No items found');
+    document.getElementById('import-loading').style.display='none';
+    document.getElementById('import-preview').style.display='';
+    document.getElementById('preview-list').innerHTML = parsedItems.map((item,i)=>`
+      <div class="preview-item">
+        <input type="checkbox" id="chk-${i}" checked style="width:16px;height:16px;cursor:pointer;flex-shrink:0;accent-color:var(--blue);"/>
+        <span class="preview-name">${item.name}</span>
+        <span class="badge badge-${item.category}">${item.category}</span>
+        <span style="color:var(--text2);white-space:nowrap;">x${item.qty}</span>
+        <span style="color:var(--blue);white-space:nowrap;">$${(item.qty*item.price).toFixed(2)}</span>
+      </div>`).join('');
+  } catch(e) {
+    document.getElementById('import-loading').style.display='none';
+    document.getElementById('import-paste-view').style.display='';
+    showToast('Could not parse. Try again.');
+  }
+}
+
+async function confirmImport() {
+  const date = document.getElementById('import-date').value || todayStr();
+  const rows = parsedItems.filter((_,i)=>{ const c=document.getElementById('chk-'+i); return c&&c.checked; }).map(item=>({
+    account_id: currentAccountId,
+    location_id: currentLocationId || null,
+    name: item.name, category: item.category,
+    quantity: item.qty, price: item.price,
+    order_date: date, notes: ''
+  }));
+  if (!rows.length) return;
+  const { error } = await sb.from('orders').insert(rows);
+  if (error) { showToast('Error saving orders'); return; }
+  showToast(`${rows.length} items imported!`);
+  resetImport(); document.getElementById('import-text').value='';
+  showOrderTab('history');
+}
+
+function resetImport() {
+  document.getElementById('import-preview').style.display='none';
+  document.getElementById('import-loading').style.display='none';
+  document.getElementById('import-paste-view').style.display='';
+}
+
+async function addOrder() {
+  const name = document.getElementById('item-name').value.trim();
+  if (!name) { document.getElementById('item-name').focus(); return; }
+  const { error } = await sb.from('orders').insert({
+    account_id: currentAccountId, location_id: currentLocationId || null,
+    name, category: document.getElementById('item-cat').value,
+    quantity: parseFloat(document.getElementById('item-qty').value)||1,
+    price: parseFloat(document.getElementById('item-price').value)||0,
+    order_date: document.getElementById('item-date').value||todayStr(),
+    notes: document.getElementById('item-notes').value.trim()
+  });
+  if (error) { showToast('Error saving'); return; }
+  showToast('Order saved!');
+  document.getElementById('item-name').value=''; document.getElementById('item-qty').value='';
+  document.getElementById('item-price').value=''; document.getElementById('item-notes').value='';
+  showOrderTab('history');
+}
+
+async function fetchOrders() {
+  let q = sb.from('orders').select('*').eq('account_id', currentAccountId);
+  if (currentLocationId) q = q.eq('location_id', currentLocationId);
+  else if (!currentLocationId && accounts.find(a=>a.id===currentAccountId)?.type==='dealership') q = q.is('location_id', null);
+  const { data } = await q.order('order_date', {ascending: false});
+  currentOrders = data || [];
+  return currentOrders;
+}
+
+async function renderHistory() {
+  const el = document.getElementById('history-list');
+  el.innerHTML = '<div class="loading"><span class="spinner"></span>Loading...</div>';
+  await fetchOrders();
+  const fc = document.getElementById('filter-cat').value;
+  let orders = fc ? currentOrders.filter(o=>o.category===fc) : currentOrders;
+  if (!orders.length) { el.innerHTML='<div class="empty">No orders yet.</div>'; return; }
+  const grouped = {};
+  orders.forEach(o=>{ const wk=getWeekKey(o.order_date); if(!grouped[wk]) grouped[wk]=[]; grouped[wk].push(o); });
+  el.innerHTML = Object.keys(grouped).sort((a,b)=>b.localeCompare(a)).map(wk=>`
+    <div class="week-label">${weekLabel(wk)}</div>
+    ${grouped[wk].map(o=>`<div class="order-card">
+      <div class="order-hdr">
+        <span class="order-name">${o.name}</span>
+        <span style="display:flex;gap:6px;align-items:center;">
+          <span class="order-price">$${(o.quantity*o.price).toFixed(2)}</span>
+          <button class="del-btn" onclick="deleteOrder(${o.id})">✕</button>
+        </span>
+      </div>
+      <div class="order-meta">
+        <span class="badge badge-${o.category}">${o.category}</span>
+        <span>x${o.quantity}</span><span>$${parseFloat(o.price).toFixed(2)} ea</span>
+        <span>${new Date(o.order_date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>
+        ${o.notes?'<span>'+o.notes+'</span>':''}
+      </div>
+    </div>`).join('')}
+    <hr class="divider">`).join('');
+}
+
+async function deleteOrder(id) {
+  const { error } = await sb.from('orders').delete().eq('id', id);
+  if (error) { showToast('Error deleting'); return; }
+  showToast('Deleted');
+  renderHistory();
+}
+
+async function loadReorder() {
+  await fetchOrders();
+  if (!currentOrders.length) { document.getElementById('reorder-list').innerHTML='<div class="empty">Import some orders first.</div>'; return; }
+  document.getElementById('reorder-loading').style.display=''; document.getElementById('reorder-list').innerHTML='';
+  const summary={};
+  currentOrders.forEach(o=>{ if(!summary[o.name]) summary[o.name]={cat:o.category,totalQty:0,weeks:new Set(),price:o.price}; summary[o.name].totalQty+=o.quantity; summary[o.name].weeks.add(getWeekKey(o.order_date)); summary[o.name].price=o.price; });
+  const hist=Object.entries(summary).map(([n,d])=>`${n} (${d.cat}): ${d.totalQty} units over ${d.weeks.size} week(s), $${parseFloat(d.price).toFixed(2)}/unit`).join('\n');
+  const prompt=`You are a supply ordering assistant for an automotive sales rep. Based on this account's order history, suggest reorder quantities for the next weekly visit. Return ONLY a JSON array, each: {name, suggestedQty, reason, priority} where priority is high/medium/low. No markdown.\n\n${hist}`;
+  try {
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]})});
+    const data=await res.json();
+    const sugg=JSON.parse(data.content.map(i=>i.text||'').join('').replace(/```json|```/g,'').trim());
+    document.getElementById('reorder-loading').style.display='none';
+    const pc={high:{bg:'var(--red-bg)',color:'var(--red-text)'},medium:{bg:'var(--amber-bg)',color:'var(--amber-text)'},low:{bg:'var(--green-bg)',color:'var(--green-text)'}};
+    document.getElementById('reorder-list').innerHTML=sugg.map(s=>`<div class="reorder-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:14px;font-weight:600;">${s.name}</span>
+        <span style="display:flex;gap:6px;align-items:center;">
+          <span style="font-size:13px;font-weight:600;">x${s.suggestedQty}</span>
+          <span style="font-size:10px;padding:2px 8px;border-radius:99px;background:${pc[s.priority].bg};color:${pc[s.priority].color};">${s.priority}</span>
+        </span>
+      </div>
+      <div style="font-size:12px;color:var(--text2);margin-top:4px;">${s.reason}</div>
+    </div>`).join('');
+  } catch(e) { document.getElementById('reorder-loading').style.display='none'; document.getElementById('reorder-list').innerHTML='<div class="empty">Could not load. Try again.</div>'; }
+}
+
+async function renderSummary() {
+  await fetchOrders();
+  const orders = currentOrders;
+  const total = orders.reduce((s,o)=>s+o.quantity*o.price,0);
+  const wt = orders.filter(o=>getWeekKey(o.order_date)===getWeekKey(todayStr())).reduce((s,o)=>s+o.quantity*o.price,0);
+  document.getElementById('stats-grid').innerHTML=`
+    <div class="stat"><div class="stat-label">Total spent</div><div class="stat-value">$${total.toFixed(2)}</div></div>
+    <div class="stat"><div class="stat-label">This week</div><div class="stat-value">$${wt.toFixed(2)}</div></div>
+    <div class="stat"><div class="stat-label">Orders</div><div class="stat-value">${orders.length}</div></div>
+    <div class="stat"><div class="stat-label">Weeks tracked</div><div class="stat-value">${new Set(orders.map(o=>getWeekKey(o.order_date))).size}</div></div>`;
+  const totals={};
+  orders.forEach(o=>{ if(!totals[o.name]) totals[o.name]={count:0,spend:0}; totals[o.name].count+=o.quantity; totals[o.name].spend+=o.quantity*o.price; });
+  const top=Object.entries(totals).sort((a,b)=>b[1].count-a[1].count).slice(0,5);
+  document.getElementById('top-items').innerHTML=top.length?`<div class="section-hdr">Most ordered items</div>`+top.map(([n,d])=>`<div class="order-card" style="padding:10px 14px;margin-bottom:6px;"><div style="display:flex;justify-content:space-between;"><span style="font-size:14px;font-weight:600;">${n}</span><span style="font-size:12px;color:var(--text2);">x${d.count} · $${d.spend.toFixed(2)}</span></div></div>`).join(''):'';
+}
+
+let currentAddType = 'dealership';
+loadAccounts();
+</script>
+
+</body>
+</html>
