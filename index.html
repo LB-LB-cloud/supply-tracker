@@ -298,7 +298,9 @@ function showScreen(id) {
   window.scrollTo(0,0);
 }
 
-function goHome() { showScreen('s-home'); var savedParts = [];
+function goHome() { showScreen('s-home'); loadAccounts(); }
+
+var savedParts = [];
 var editingPartId = null;
 
 function gotoParts() { showScreen('s-parts'); setPartsView('search'); }
@@ -914,156 +916,6 @@ function renderSummary() {
 
 var savedParts = [];
 var editingPartId = null;
-
-function gotoParts() { showScreen('s-parts'); setPartsView('search'); }
-
-function setPartsView(view) {
-  document.getElementById('parts-search-view').style.display = view === 'search' ? '' : 'none';
-  document.getElementById('parts-saved-view').style.display = view === 'saved' ? '' : 'none';
-  document.getElementById('parts-btn-search').classList.toggle('active', view === 'search');
-  document.getElementById('parts-btn-saved').classList.toggle('active', view === 'saved');
-  if (view === 'saved') loadSavedParts();
-}
-
-async function searchParts() {
-  var query = document.getElementById('parts-search-input').value.trim();
-  if (!query) return;
-  var el = document.getElementById('parts-search-results');
-  el.innerHTML = '<div class="loading"><span class="spinner"></span>Searching Crest Industries...</div>';
-  try {
-    var res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1500,
-        tools: [{"type": "web_search_20250305", "name": "web_search"}],
-        messages: [{role: 'user', content: 'Search crestindustries.com for: ' + query + '. Return a JSON array of up to 5 matching products with fields: part_number, description, category, oem_numbers, url. Only return the JSON array, no markdown, no explanation.'}]
-      })
-    });
-    var data = await res.json();
-    var text = data.content.map(function(i){ return i.text || ''; }).join('');
-    var clean = text.replace(/```json|```/g,'').trim();
-    var idx = clean.indexOf('[');
-    if (idx >= 0) clean = clean.slice(idx);
-    var results = [];
-    try { results = JSON.parse(clean); } catch(e) { results = []; }
-    if (!results.length) {
-      el.innerHTML = '<div class="empty">No results found.<br>Try a different search term or add manually.</div><button class="btn" style="margin-top:8px" onclick="openAddPart(null,document.getElementById('parts-search-input').value)">+ Add manually</button>';
-      return;
-    }
-    el.innerHTML = results.map(function(r) {
-      var alreadySaved = savedParts.some(function(p){ return p.part_number === r.part_number; });
-      var rStr = JSON.stringify(r).replace(/'/g,"\x27");
-      return '<div class="card" style="margin-bottom:10px">' +
-        '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">' +
-        '<span style="font-weight:600;font-size:15px">' + (r.part_number||'') + '</span>' +
-        '<span class="pill pill-dealer">' + (r.category||'Fasteners') + '</span></div>' +
-        '<div style="font-size:13px;margin-bottom:6px">' + (r.description||'') + '</div>' +
-        (r.oem_numbers ? '<div style="font-size:12px;color:var(--text2);margin-bottom:6px">OEM: ' + r.oem_numbers + '</div>' : '') +
-        '<div style="display:flex;gap:8px">' +
-        (r.url ? '<a href="' + r.url + '" target="_blank" style="flex:1;text-align:center;padding:8px;font-size:12px;border:0.5px solid var(--border2);border-radius:var(--radius);color:var(--blue);text-decoration:none">View on Crest &#8599;</a>' : '') +
-        '<button onclick='openAddPartFromResult(' + rStr + ')' class="btn ' + (alreadySaved?'':'btn-primary') + '" style="flex:1;margin-top:0;font-size:12px;padding:8px">' + (alreadySaved?'&#10003; Saved':'+ Save') + '</button>' +
-        '</div></div>';
-    }).join('') + '<button class="btn" style="margin-top:4px" onclick="openAddPart(null,document.getElementById('parts-search-input').value)">+ Add manually</button>';
-  } catch(e) {
-    el.innerHTML = '<div class="empty">Search failed. Try again or add manually.</div><button class="btn" style="margin-top:8px" onclick="openAddPart(null,document.getElementById('parts-search-input').value)">+ Add manually</button>';
-  }
-}
-
-function openAddPartFromResult(r) {
-  editingPartId = null;
-  document.getElementById('add-part-title').textContent = 'Save part';
-  document.getElementById('p-number').value = r.part_number || '';
-  document.getElementById('p-desc').value = r.description || '';
-  document.getElementById('p-oem').value = r.oem_numbers || '';
-  document.getElementById('p-notes').value = '';
-  document.getElementById('p-source').value = 'Crest Industries';
-  showScreen('s-add-part');
-}
-
-function openAddPart(r, query) {
-  editingPartId = null;
-  document.getElementById('add-part-title').textContent = 'Save part';
-  document.getElementById('p-number').value = (r && r.part_number) ? r.part_number : (query||'');
-  document.getElementById('p-desc').value = (r && r.description) ? r.description : '';
-  document.getElementById('p-oem').value = (r && r.oem_numbers) ? r.oem_numbers : '';
-  document.getElementById('p-notes').value = '';
-  document.getElementById('p-source').value = 'Crest Industries';
-  showScreen('s-add-part');
-}
-
-function openEditPart(p) {
-  editingPartId = p.id;
-  document.getElementById('add-part-title').textContent = 'Edit part';
-  document.getElementById('p-number').value = p.part_number || '';
-  document.getElementById('p-desc').value = p.description || '';
-  document.getElementById('p-cat').value = p.category || 'Other';
-  document.getElementById('p-oem').value = p.oem_numbers || '';
-  document.getElementById('p-notes').value = p.notes || '';
-  document.getElementById('p-source').value = p.source || 'Crest Industries';
-  showScreen('s-add-part');
-}
-
-async function savePart() {
-  var pn = document.getElementById('p-number').value.trim();
-  if (!pn) { document.getElementById('p-number').focus(); return; }
-  var data = { part_number: pn, description: document.getElementById('p-desc').value.trim(), category: document.getElementById('p-cat').value, oem_numbers: document.getElementById('p-oem').value.trim(), notes: document.getElementById('p-notes').value.trim(), source: document.getElementById('p-source').value.trim() || 'Crest Industries' };
-  var result;
-  if (editingPartId) {
-    result = await sb.from('parts').update(data).eq('id', editingPartId);
-    if (result.error) { showToast('Error updating'); return; }
-    showToast('Part updated!');
-  } else {
-    result = await sb.from('parts').insert(data);
-    if (result.error) { showToast('Error saving'); return; }
-    showToast('Part saved!');
-  }
-  showScreen('s-parts'); setPartsView('saved');
-}
-
-async function loadSavedParts() {
-  var el = document.getElementById('parts-saved-list');
-  el.innerHTML = '<div class="loading"><span class="spinner"></span>Loading...</div>';
-  var result = await sb.from('parts').select('*').order('part_number');
-  savedParts = result.data || [];
-  renderSavedParts(savedParts);
-}
-
-function filterSavedParts() {
-  var s = document.getElementById('parts-db-search').value.trim().toLowerCase();
-  var filtered = s ? savedParts.filter(function(p){ return (p.part_number&&p.part_number.toLowerCase().indexOf(s)>=0)||(p.description&&p.description.toLowerCase().indexOf(s)>=0)||(p.oem_numbers&&p.oem_numbers.toLowerCase().indexOf(s)>=0)||(p.notes&&p.notes.toLowerCase().indexOf(s)>=0); }) : savedParts;
-  renderSavedParts(filtered);
-}
-
-function renderSavedParts(parts) {
-  var el = document.getElementById('parts-saved-list');
-  if (!parts.length) { el.innerHTML = '<div class="empty">No parts saved yet.<br>Use Search to find and save parts.</div>'; return; }
-  var grouped = {};
-  parts.forEach(function(p){ var c=p.category||'Other'; if(!grouped[c]) grouped[c]=[]; grouped[c].push(p); });
-  el.innerHTML = Object.keys(grouped).sort().map(function(cat) {
-    return '<div style="font-size:12px;font-weight:600;color:var(--text2);margin:12px 0 6px">' + cat + ' (' + grouped[cat].length + ')</div>' +
-      grouped[cat].map(function(p) {
-        var pStr = JSON.stringify(p).replace(/'/g,"\x27");
-        return '<div class="card" style="margin-bottom:8px">' +
-          '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">' +
-          '<span style="font-weight:600;font-size:14px">' + p.part_number + '</span>' +
-          '<span style="display:flex;gap:6px;align-items:center">' +
-          '<button class="del-btn" onclick='openEditPart(' + pStr + ')' style="font-size:14px">&#9998;</button>' +
-          '<button class="del-btn" onclick="deletePart(' + p.id + ')">&#10005;</button></span></div>' +
-          (p.description?'<div style="font-size:13px;margin-bottom:3px">'+p.description+'</div>':'') +
-          (p.oem_numbers?'<div style="font-size:12px;color:var(--text2)">OEM: '+p.oem_numbers+'</div>':'') +
-          (p.notes?'<div style="font-size:12px;color:var(--text2);margin-top:2px">'+p.notes+'</div>':'') +
-          '</div>';
-      }).join('');
-  }).join('');
-}
-
-async function deletePart(id) {
-  var r = await sb.from('parts').delete().eq('id', id);
-  if (r.error) { showToast('Error deleting'); return; }
-  showToast('Deleted'); loadSavedParts();
-}
 
 loadAccounts();
 </script>
