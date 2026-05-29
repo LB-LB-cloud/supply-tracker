@@ -59,47 +59,38 @@ function extractFormKey(html) {
 function mapCategory(name) {
   const n = name.toUpperCase();
   if (/RETAINER|CLIP|FASTENER|BOLT|SCREW|\bNUT\b|RIVET|GROMMET|PUSH.TYPE|PLASTIC NUT/.test(n)) return 'Fasteners';
-  if (/PAINT|COAT|PRIMER|CLEAR COAT|OIL|FLUID|GREASE|LUBRIC|SOLVENT|CLEANER|WASH|SEAM SEAL|EPOXY/.test(n)) return 'Chemicals';
+  if (/PAINT|COAT|PRIMER|CLEAR COAT|OIL|FLUID|GREASE|LUBRIC|SOLVENT|CLEANER|WASH|SEAM SEAL|EPOXY|ABRASIVE|SANDPAPER|CUTTING/.test(n)) return 'Chemicals';
   if (/GLOVE|SAFETY|GOGGLE|EYEWEAR|SHIELD/.test(n)) return 'Safety';
-  if (/\bTOOL\b|GUN|NOZZLE|APPLICAT/.test(n)) return 'Tools';
+  if (/\bTOOL\b|GUN|NOZZLE|APPLICAT|DRILL|BIT/.test(n)) return 'Tools';
   return 'Other';
 }
 
-function extractProducts(html, categoryName) {
-  const products = [];
+// Extract product-item links from a page (works for both category and subcategory pages)
+function extractLinks(html) {
+  const links = [];
   const seen = new Set();
-  const linkRe = /<a[^>]+class="[^"]*product-item-link[^"]*"[^>]+href="([^"]+)"[^>]*>([^<]+)<\/a>/gi;
+  // Pattern 1: <li class="item product product-item"><a title="NAME" href="URL">
+  const re1 = /<li[^>]+class="[^"]*product-item[^"]*"[^>]*>\s*<a[^>]+title="([^"]+)"[^>]+href="([^"]+)"/gis;
   let m;
-  while ((m = linkRe.exec(html)) !== null) {
+  while ((m = re1.exec(html)) !== null) {
+    const name = m[1].trim();
+    const url = m[2].trim();
+    if (!seen.has(url) && url.startsWith('http')) {
+      seen.add(url);
+      links.push({ name, url });
+    }
+  }
+  // Pattern 2: product-item-link class
+  const re2 = /<a[^>]+class="[^"]*product-item-link[^"]*"[^>]+href="([^"]+)"[^>]*>([^<]+)<\/a>/gi;
+  while ((m = re2.exec(html)) !== null) {
     const url = m[1].trim();
     const name = m[2].trim();
-    if (!seen.has(url) && name) {
+    if (!seen.has(url) && url.startsWith('http') && name) {
       seen.add(url);
-      const skuM = url.match(/\/([A-Z0-9\-]+)\.html$/i);
-      const sku = skuM ? skuM[1] : name.slice(0, 40);
-      products.push({ url, name, sku });
+      links.push({ name, url });
     }
   }
-  if (products.length === 0) {
-    const nameRe = /<strong[^>]+class="[^"]*product-item-name[^"]*"[^>]*>.*?<a[^>]+href="([^"]+)"[^>]*>([^<]+)<\/a>/gis;
-    while ((m = nameRe.exec(html)) !== null) {
-      const url = m[1].trim();
-      const name = m[2].trim();
-      if (!seen.has(url) && name) {
-        seen.add(url);
-        const skuM = url.match(/\/([A-Z0-9\-]+)\.html$/i);
-        products.push({ url, name, sku: skuM ? skuM[1] : name.slice(0,40) });
-      }
-    }
-  }
-  return products.map(p => ({
-    part_number: p.sku,
-    description: p.name,
-    category: mapCategory(p.name + ' ' + categoryName),
-    oem_numbers: '',
-    notes: '',
-    source: 'Crest Industries',
-  }));
+  return links;
 }
 
 function getCategoryLinks(html) {
@@ -110,7 +101,7 @@ function getCategoryLinks(html) {
   while ((m = re.exec(html)) !== null) {
     const url = m[1].trim();
     const name = m[2].trim();
-    if (!seen.has(url) && name && !url.includes('login') && !url.includes('account')) {
+    if (!seen.has(url) && name && !url.includes('login') && !url.includes('account') && name.length > 2) {
       seen.add(url);
       cats.push({ url, name });
     }
@@ -131,15 +122,14 @@ module.exports = async (req, res) => {
   const cookieJar = {};
 
   try {
+    // Login
     const loginPage = await fetchUrl(`${BASE}/customer/account/login/`, {}, cookieJar);
     const formKey = extractFormKey(loginPage.text);
-
     const loginResp = await fetchUrl(
       `${BASE}/customer/account/loginPost/`,
       { method: 'POST', body: encodeForm({ form_key: formKey, 'login[username]': email, 'login[password]': password }) },
       cookieJar
     );
-
     if (loginResp.url.includes('account/login') || loginResp.text.includes('Invalid')) {
       return res.status(401).json({ error: 'Login failed — check your email and password' });
     }
@@ -150,11 +140,58 @@ module.exports = async (req, res) => {
       return res.json({ categories: cats });
     }
 
+    // mode === 'scrape' — scrape category page, then follow sub-links to find products
     const { categoryUrl, categoryName } = req.body;
     if (!categoryUrl) return res.status(400).json({ error: 'categoryUrl required' });
 
     const catPage = await fetchUrl(categoryUrl, {}, cookieJar);
-    const products = extractProducts(catPage.text, categoryName || '');
+    const topLinks = extractLinks(catPage.text);
+
+    const products = [];
+    const seen = new Set();
+
+    // If we found links, check if they lead to products or sub-categories
+    for (const link of topLinks.slice(0, 8)) { // limit to 8 to avoid timeout
+      if (seen.has(link.url)) continue;
+      seen.add(link.url);
+
+      try {
+        const subPage = await fetchUrl(link.url, {}, cookieJar);
+        const subLinks = extractLinks(subPage.text);
+
+        if (subLinks.length > 0) {
+          // These are actual products
+          for (const p of subLinks) {
+            if (!seen.has(p.url)) {
+              seen.add(p.url);
+              const skuM = p.url.match(/\/([A-Z0-9][A-Z0-9\-]+)\.html$/i);
+              products.push({
+                part_number: skuM ? skuM[1] : p.name.slice(0, 40),
+                description: p.name,
+                category: mapCategory(p.name + ' ' + categoryName),
+                oem_numbers: '',
+                notes: link.name, // parent brand/subcategory as note
+                source: 'Crest Industries',
+              });
+            }
+          }
+        } else {
+          // The link itself is a product
+          const skuM = link.url.match(/\/([A-Z0-9][A-Z0-9\-]+)\.html$/i);
+          products.push({
+            part_number: skuM ? skuM[1] : link.name.slice(0, 40),
+            description: link.name,
+            category: mapCategory(link.name + ' ' + categoryName),
+            oem_numbers: '',
+            notes: categoryName,
+            source: 'Crest Industries',
+          });
+        }
+      } catch(e) {
+        // skip failed sub-pages
+      }
+    }
+
     return res.json({ products, category: categoryName, count: products.length });
 
   } catch (err) {
