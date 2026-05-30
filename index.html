@@ -407,7 +407,7 @@ async function loadSavedParts(){
   var result=await sb.from('parts').select('*').order('part_number');
   savedParts=result.data||[];renderSavedParts(savedParts);
 }
-function filterSavedParts(){var s=document.getElementById('parts-db-search').value.trim().toLowerCase();var filtered=s?savedParts.filter(function(p){return(p.part_number&&p.part_number.toLowerCase().indexOf(s)>=0)||(p.description&&p.description.toLowerCase().indexOf(s)>=0)||(p.oem_numbers&&p.oem_numbers.toLowerCase().indexOf(s)>=0);]):savedParts;renderSavedParts(filtered);}
+function filterSavedParts(){var s=document.getElementById('parts-db-search').value.trim().toLowerCase();var filtered=s?savedParts.filter(function(p){return(p.part_number&&p.part_number.toLowerCase().indexOf(s)>=0)||(p.description&&p.description.toLowerCase().indexOf(s)>=0)||(p.oem_numbers&&p.oem_numbers.toLowerCase().indexOf(s)>=0);}):savedParts;renderSavedParts(filtered);}
 function renderSavedParts(parts){
   var el=document.getElementById('parts-saved-list');
   if(!parts.length){el.innerHTML='<div class="empty">No parts saved yet.<br>Use Search or Bulk Import to add parts.</div>';return;}
