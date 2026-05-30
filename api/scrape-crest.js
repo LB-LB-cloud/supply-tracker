@@ -65,22 +65,21 @@ function mapCategory(name) {
   return 'Other';
 }
 
-// Extract product-item links from a page (works for both category and subcategory pages)
-function extractLinks(html) {
+function extractProductLinks(html) {
   const links = [];
   const seen = new Set();
-  // Pattern 1: <li class="item product product-item"><a title="NAME" href="URL">
+  // Pattern: <li class="item product product-item"><a title="NAME" href="URL">
   const re1 = /<li[^>]+class="[^"]*product-item[^"]*"[^>]*>\s*<a[^>]+title="([^"]+)"[^>]+href="([^"]+)"/gis;
   let m;
   while ((m = re1.exec(html)) !== null) {
     const name = m[1].trim();
     const url = m[2].trim();
-    if (!seen.has(url) && url.startsWith('http')) {
+    if (!seen.has(url) && url.startsWith('http') && !url.includes('login') && !url.includes('account')) {
       seen.add(url);
       links.push({ name, url });
     }
   }
-  // Pattern 2: product-item-link class
+  // Fallback: product-item-link
   const re2 = /<a[^>]+class="[^"]*product-item-link[^"]*"[^>]+href="([^"]+)"[^>]*>([^<]+)<\/a>/gi;
   while ((m = re2.exec(html)) !== null) {
     const url = m[1].trim();
@@ -96,17 +95,69 @@ function extractLinks(html) {
 function getCategoryLinks(html) {
   const cats = [];
   const seen = new Set();
-  const re = /<a[^>]+href="(https:\/\/www\.crestindustries\.com\/[^"]+\.html)"[^>]*>([^<]+)<\/a>/gi;
+  const re = /<a[^>]+href="(https:\/\/www\.crestindustries\.com\/[^"#]+\.html)"[^>]*>([^<\n]+)<\/a>/gi;
   let m;
   while ((m = re.exec(html)) !== null) {
     const url = m[1].trim();
     const name = m[2].trim();
-    if (!seen.has(url) && name && !url.includes('login') && !url.includes('account') && name.length > 2) {
+    if (!seen.has(url) && name && name.length > 2 &&
+        !url.includes('login') && !url.includes('account') &&
+        !url.includes('static') && !url.includes('media')) {
       seen.add(url);
       cats.push({ url, name });
     }
   }
   return cats;
+}
+
+async function login(email, password, cookieJar) {
+  const loginPage = await fetchUrl(`${BASE}/customer/account/login/`, {}, cookieJar);
+  const formKey = extractFormKey(loginPage.text);
+  const loginResp = await fetchUrl(
+    `${BASE}/customer/account/loginPost/`,
+    { method: 'POST', body: encodeForm({ form_key: formKey, 'login[username]': email, 'login[password]': password }) },
+    cookieJar
+  );
+  return !loginResp.url.includes('account/login') && !loginResp.text.includes('Invalid');
+}
+
+// Recursively scrape a URL — goes up to maxDepth levels deep
+async function scrapeDeep(url, name, cookieJar, seen, maxDepth, currentDepth = 0) {
+  if (seen.has(url) || currentDepth > maxDepth) return [];
+  seen.add(url);
+
+  let page;
+  try {
+    page = await fetchUrl(url, {}, cookieJar);
+  } catch(e) {
+    return [];
+  }
+
+  const links = extractProductLinks(page.text);
+
+  if (links.length === 0) {
+    // This is a leaf product page — save it
+    const skuM = url.match(/\/([A-Z0-9][A-Z0-9\-]{2,})\.html$/i);
+    return [{
+      part_number: skuM ? skuM[1] : name.slice(0, 50),
+      description: name,
+      category: mapCategory(name),
+      oem_numbers: '',
+      notes: '',
+      source: 'Crest Industries',
+    }];
+  }
+
+  // Has sub-links — recurse into each
+  const products = [];
+  for (const link of links) {
+    if (seen.has(link.url)) continue;
+    const sub = await scrapeDeep(link.url, link.name, cookieJar, seen, maxDepth, currentDepth + 1);
+    products.push(...sub);
+    // Safety: stop if we've collected enough for one batch
+    if (products.length >= 150) break;
+  }
+  return products;
 }
 
 module.exports = async (req, res) => {
@@ -122,17 +173,8 @@ module.exports = async (req, res) => {
   const cookieJar = {};
 
   try {
-    // Login
-    const loginPage = await fetchUrl(`${BASE}/customer/account/login/`, {}, cookieJar);
-    const formKey = extractFormKey(loginPage.text);
-    const loginResp = await fetchUrl(
-      `${BASE}/customer/account/loginPost/`,
-      { method: 'POST', body: encodeForm({ form_key: formKey, 'login[username]': email, 'login[password]': password }) },
-      cookieJar
-    );
-    if (loginResp.url.includes('account/login') || loginResp.text.includes('Invalid')) {
-      return res.status(401).json({ error: 'Login failed — check your email and password' });
-    }
+    const ok = await login(email, password, cookieJar);
+    if (!ok) return res.status(401).json({ error: 'Login failed — check your email and password' });
 
     if (mode === 'categories') {
       const homePage = await fetchUrl(BASE, {}, cookieJar);
@@ -140,59 +182,42 @@ module.exports = async (req, res) => {
       return res.json({ categories: cats });
     }
 
-    // mode === 'scrape' — scrape category page, then follow sub-links to find products
-    const { categoryUrl, categoryName } = req.body;
-    if (!categoryUrl) return res.status(400).json({ error: 'categoryUrl required' });
+    if (mode === 'scrape') {
+      const { categoryUrl, categoryName, offset = 0 } = req.body;
+      if (!categoryUrl) return res.status(400).json({ error: 'categoryUrl required' });
 
-    const catPage = await fetchUrl(categoryUrl, {}, cookieJar);
-    const topLinks = extractLinks(catPage.text);
+      // Get the top-level links for this category
+      const catPage = await fetchUrl(categoryUrl, {}, cookieJar);
+      const topLinks = extractProductLinks(catPage.text);
 
-    const products = [];
-    const seen = new Set();
-
-    // If we found links, check if they lead to products or sub-categories
-    for (const link of topLinks.slice(0, 8)) { // limit to 8 to avoid timeout
-      if (seen.has(link.url)) continue;
-      seen.add(link.url);
-
-      try {
-        const subPage = await fetchUrl(link.url, {}, cookieJar);
-        const subLinks = extractLinks(subPage.text);
-
-        if (subLinks.length > 0) {
-          // These are actual products
-          for (const p of subLinks) {
-            if (!seen.has(p.url)) {
-              seen.add(p.url);
-              const skuM = p.url.match(/\/([A-Z0-9][A-Z0-9\-]+)\.html$/i);
-              products.push({
-                part_number: skuM ? skuM[1] : p.name.slice(0, 40),
-                description: p.name,
-                category: mapCategory(p.name + ' ' + categoryName),
-                oem_numbers: '',
-                notes: link.name, // parent brand/subcategory as note
-                source: 'Crest Industries',
-              });
-            }
-          }
-        } else {
-          // The link itself is a product
-          const skuM = link.url.match(/\/([A-Z0-9][A-Z0-9\-]+)\.html$/i);
-          products.push({
-            part_number: skuM ? skuM[1] : link.name.slice(0, 40),
-            description: link.name,
-            category: mapCategory(link.name + ' ' + categoryName),
-            oem_numbers: '',
-            notes: categoryName,
-            source: 'Crest Industries',
-          });
-        }
-      } catch(e) {
-        // skip failed sub-pages
+      if (topLinks.length === 0) {
+        return res.json({ products: [], done: true, nextOffset: 0 });
       }
+
+      // Process a batch of top-level links starting at offset
+      const batchSize = 3; // process 3 top-level links per call to stay under timeout
+      const batch = topLinks.slice(offset, offset + batchSize);
+      const seen = new Set([categoryUrl]);
+      const products = [];
+
+      for (const link of batch) {
+        const sub = await scrapeDeep(link.url, link.name, cookieJar, seen, 3);
+        products.push(...sub);
+      }
+
+      const nextOffset = offset + batchSize;
+      const done = nextOffset >= topLinks.length;
+
+      return res.json({
+        products,
+        done,
+        nextOffset,
+        totalLinks: topLinks.length,
+        processedLinks: Math.min(nextOffset, topLinks.length),
+      });
     }
 
-    return res.json({ products, category: categoryName, count: products.length });
+    return res.status(400).json({ error: 'Invalid mode' });
 
   } catch (err) {
     console.error(err);
