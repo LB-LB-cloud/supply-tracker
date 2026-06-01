@@ -220,9 +220,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <button class="seg-btn" id="parts-btn-bulk" onclick="setPartsView('bulk')">Bulk import</button>
   </div>
   <div id="parts-search-view">
-    <div class="info-box">Search Crest Industries by part number, description, or OEM number. Save parts to build your personal database.</div>
+    <div class="info-box">Search your imported Crest Industries catalog by part number, name, or OEM number.</div>
     <div class="form-group" style="display:flex;gap:8px">
-      <input type="text" id="parts-search-input" placeholder="e.g. CRX5114, push retainer, 15289020..." style="flex:1" onkeydown="if(event.key==='Enter') searchParts()"/>
+      <input type="text" id="parts-search-input" placeholder="e.g. CRX5114, push retainer, abrasive..." style="flex:1" onkeydown="if(event.key==='Enter') searchParts()"/>
       <button class="btn btn-primary" style="margin-top:0;width:auto;padding:10px 16px;" onclick="searchParts()">Search</button>
     </div>
     <div id="parts-search-results"></div>
@@ -375,20 +375,28 @@ async function searchParts(){
   var query=document.getElementById('parts-search-input').value.trim();
   if(!query)return;
   var el=document.getElementById('parts-search-results');
-  el.innerHTML='<div class="loading"><span class="spinner"></span>Searching Crest Industries...</div>';
+  el.innerHTML='<div class="loading"><span class="spinner"></span>Searching...</div>';
   try{
-    var res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1500,tools:[{"type":"web_search_20250305","name":"web_search"}],messages:[{role:'user',content:'Search crestindustries.com for: '+query+'. Return a JSON array of up to 5 matching products with fields: part_number, description, category, oem_numbers, url. Only return the JSON array, no markdown, no explanation.'}]})});
-    var data=await res.json();
-    var text=data.content.map(function(i){return i.text||'';}).join('');
-    var clean=text.replace(/```json|```/g,'').trim();
-    var idx=clean.indexOf('[');if(idx>=0)clean=clean.slice(idx);
-    var results=[];try{results=JSON.parse(clean);}catch(e){results=[];}
-    if(!results.length){el.innerHTML='<div class="empty">No results found.<br>Try a different search term or add manually.</div>';return;}
+    var result=await sb.from('parts').select('*')
+      .or('part_number.ilike.%'+query+'%,description.ilike.%'+query+'%,oem_numbers.ilike.%'+query+'%,long_description.ilike.%'+query+'%')
+      .order('part_number').limit(30);
+    var results=result.data||[];
+    if(!results.length){el.innerHTML='<div class="empty">No results found for "'+query+'".<br>Try importing more products or add manually.</div>';return;}
     el.innerHTML=results.map(function(r){
       var rStr=JSON.stringify(r).replace(/'/g,"\x27");
-      return '<div class="card" style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px"><span style="font-weight:600;font-size:15px">'+(r.part_number||'')+'</span><span class="pill">'+(r.category||'Fasteners')+'</span></div><div style="font-size:13px;margin-bottom:6px">'+(r.description||'')+'</div>'+(r.oem_numbers?'<div style="font-size:12px;color:var(--text2);margin-bottom:6px">OEM: '+r.oem_numbers+'</div>':'')+'<button onclick="openAddPartFromResult('+rStr+')" class="btn btn-primary" style="margin-top:0;font-size:12px;padding:8px">+ Save</button></div>';
+      return '<div class="card" style="margin-bottom:10px">'
+        +(r.image_url?'<img src="'+r.image_url+'" style="width:100%;max-height:120px;object-fit:contain;border-radius:6px;margin-bottom:8px;background:var(--bg2)" onerror="this.style.display=\'none\'"/>':'')
+        +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">'
+        +'<span style="font-weight:600;font-size:15px">'+(r.part_number||'')+'</span>'
+        +'<span style="display:flex;gap:6px;align-items:center">'
+        +(r.price?'<span style="font-weight:600;color:var(--blue);font-size:13px">$'+parseFloat(r.price).toFixed(2)+'</span>':'')
+        +'<span class="badge badge-'+(r.category||'Other')+'">'+(r.category||'Other')+'</span></span></div>'
+        +'<div style="font-size:13px;margin-bottom:4px">'+(r.description||'')+'</div>'
+        +(r.long_description?'<div style="font-size:12px;color:var(--text2);margin-bottom:4px">'+r.long_description.slice(0,120)+'...</div>':'')
+        +(r.oem_numbers?'<div style="font-size:12px;color:var(--text2);margin-bottom:6px">OEM: '+r.oem_numbers+'</div>':'')
+        +'<button onclick="openAddPartFromResult('+rStr+')" class="btn btn-primary" style="margin-top:0;font-size:12px;padding:8px">+ Save to list</button></div>';
     }).join('');
-  }catch(e){el.innerHTML='<div class="empty">Search failed. Try again or add manually.</div>';}
+  }catch(e){el.innerHTML='<div class="empty">Search failed: '+e.message+'</div>';}
 }
 function openAddPartFromResult(r){editingPartId=null;document.getElementById('add-part-title').textContent='Save part';document.getElementById('p-number').value=r.part_number||'';document.getElementById('p-desc').value=r.description||'';document.getElementById('p-oem').value=r.oem_numbers||'';document.getElementById('p-notes').value='';document.getElementById('p-source').value='Crest Industries';showScreen('s-add-part');}
 function openAddPart(r,query){editingPartId=null;document.getElementById('add-part-title').textContent='Save part';document.getElementById('p-number').value=(r&&r.part_number)?r.part_number:(query||'');document.getElementById('p-desc').value=(r&&r.description)?r.description:'';document.getElementById('p-oem').value=(r&&r.oem_numbers)?r.oem_numbers:'';document.getElementById('p-notes').value='';document.getElementById('p-source').value='Crest Industries';showScreen('s-add-part');}
@@ -416,7 +424,18 @@ function renderSavedParts(parts){
     return '<div style="font-size:12px;font-weight:600;color:var(--text2);margin:12px 0 6px">'+cat+' ('+grouped[cat].length+')</div>'+
       grouped[cat].map(function(p){
         var pStr=JSON.stringify(p).replace(/'/g,"\x27");
-        return '<div class="card" style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px"><span style="font-weight:600;font-size:14px">'+p.part_number+'</span><span style="display:flex;gap:6px;align-items:center"><button class="del-btn" onclick="openEditPart('+pStr+')" style="font-size:14px">&#9998;</button><button class="del-btn" onclick="deletePart('+p.id+')">&#10005;</button></span></div>'+(p.description?'<div style="font-size:13px;margin-bottom:3px">'+p.description+'</div>':'')+(p.oem_numbers?'<div style="font-size:12px;color:var(--text2)">OEM: '+p.oem_numbers+'</div>':'')+(p.notes?'<div style="font-size:12px;color:var(--text2);margin-top:2px">'+p.notes+'</div>':'')+'</div>';
+        return '<div class="card" style="margin-bottom:8px">'
+          +(p.image_url?'<img src="'+p.image_url+'" style="width:60px;height:60px;object-fit:contain;float:right;margin-left:8px;border-radius:6px;background:var(--bg2)" onerror="this.style.display=\'none\'"/>':'')
+          +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">'
+          +'<span style="font-weight:600;font-size:14px">'+p.part_number+'</span>'
+          +'<span style="display:flex;gap:6px;align-items:center">'
+          +(p.price?'<span style="font-size:12px;font-weight:600;color:var(--blue)">$'+parseFloat(p.price).toFixed(2)+'</span>':'')
+          +'<button class="del-btn" onclick="openEditPart('+pStr+')" style="font-size:14px">&#9998;</button>'
+          +'<button class="del-btn" onclick="deletePart('+p.id+')">&#10005;</button></span></div>'
+          +(p.description?'<div style="font-size:13px;margin-bottom:3px">'+p.description+'</div>':'')
+          +(p.oem_numbers?'<div style="font-size:12px;color:var(--text2)">OEM: '+p.oem_numbers+'</div>':'')
+          +(p.notes?'<div style="font-size:12px;color:var(--text2);margin-top:2px">'+p.notes+'</div>':'')
+          +'<div style="clear:both"></div></div>';
       }).join('');
   }).join('');
 }
