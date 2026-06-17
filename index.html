@@ -365,7 +365,7 @@ async function searchParts() {
     var results = [];
     try { results = JSON.parse(clean); } catch(e) { results = []; }
     if (!results.length) {
-      el.innerHTML = '<div class="empty">No results found.<br>Try a different search term or add manually.</div><button class="btn" style="margin-top:8px" onclick="openAddPart(null,document.getElementById('parts-search-input').value)">+ Add manually</button>';
+      el.innerHTML = '<div class="empty">No results found.<br>Try a different search term or add manually.</div><button class="btn" style="margin-top:8px" onclick="openAddPart(null,document.getElementById(\x27parts-search-input\x27).value)">+ Add manually</button>';
       return;
     }
     el.innerHTML = results.map(function(r) {
@@ -379,11 +379,11 @@ async function searchParts() {
         (r.oem_numbers ? '<div style="font-size:12px;color:var(--text2);margin-bottom:6px">OEM: ' + r.oem_numbers + '</div>' : '') +
         '<div style="display:flex;gap:8px">' +
         (r.url ? '<a href="' + r.url + '" target="_blank" style="flex:1;text-align:center;padding:8px;font-size:12px;border:0.5px solid var(--border2);border-radius:var(--radius);color:var(--blue);text-decoration:none">View on Crest &#8599;</a>' : '') +
-        '<button onclick='openAddPartFromResult(' + rStr + ')' class="btn ' + (alreadySaved?'':'btn-primary') + '" style="flex:1;margin-top:0;font-size:12px;padding:8px">' + (alreadySaved?'&#10003; Saved':'+ Save') + '</button>' +
+        '<button onclick="openAddPartFromResult(' + rStr + ')" class="btn ' + (alreadySaved?'':'btn-primary') + '" style="flex:1;margin-top:0;font-size:12px;padding:8px">' + (alreadySaved?'&#10003; Saved':'+ Save') + '</button>' +
         '</div></div>';
-    }).join('') + '<button class="btn" style="margin-top:4px" onclick="openAddPart(null,document.getElementById('parts-search-input').value)">+ Add manually</button>';
+    }).join('') + '<button class="btn" style="margin-top:4px" onclick="openAddPart(null,document.getElementById(\x27parts-search-input\x27).value)">+ Add manually</button>';
   } catch(e) {
-    el.innerHTML = '<div class="empty">Search failed. Try again or add manually.</div><button class="btn" style="margin-top:8px" onclick="openAddPart(null,document.getElementById('parts-search-input').value)">+ Add manually</button>';
+    el.innerHTML = '<div class="empty">Search failed. Try again or add manually.</div><button class="btn" style="margin-top:8px" onclick="openAddPart(null,document.getElementById(\x27parts-search-input\x27).value)">+ Add manually</button>';
   }
 }
 
@@ -465,7 +465,7 @@ function renderSavedParts(parts) {
           '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">' +
           '<span style="font-weight:600;font-size:14px">' + p.part_number + '</span>' +
           '<span style="display:flex;gap:6px;align-items:center">' +
-          '<button class="del-btn" onclick='openEditPart(' + pStr + ')' style="font-size:14px">&#9998;</button>' +
+          '<button class="del-btn" onclick="openEditPart(' + pStr + ')" style="font-size:14px">&#9998;</button>' +
           '<button class="del-btn" onclick="deletePart(' + p.id + ')">&#10005;</button></span></div>' +
           (p.description?'<div style="font-size:13px;margin-bottom:3px">'+p.description+'</div>':'') +
           (p.oem_numbers?'<div style="font-size:12px;color:var(--text2)">OEM: '+p.oem_numbers+'</div>':'') +
