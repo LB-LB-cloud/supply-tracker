@@ -272,15 +272,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <h1 id="add-bin-title">Add Bin / Drawer</h1>
   </div>
   <div class="form-group"><label>Bin / Drawer name</label><input type="text" id="bin-name" placeholder="e.g. Drawer A1, Bin 3, Top Shelf"/></div>
-  <div class="form-group"><label>Part numbers (one per line)</label><textarea id="bin-parts" placeholder="e.g.
-CRX5114
-CRX2201
-90467-06020" style="min-height:200px"></textarea></div>
+  <div class="form-group"><label>Part numbers (one per line)</label><textarea id="bin-parts" placeholder="e.g.&#10;CRX5114&#10;CRX2201" style="min-height:200px"></textarea></div>
   <div class="form-group"><label>Notes (optional)</label><input type="text" id="bin-notes" placeholder="e.g. Push-type retainers"/></div>
   <button class="btn btn-primary" onclick="saveBin()">Save</button>
   <button class="btn" id="delete-bin-btn" style="display:none;margin-top:8px;color:var(--red-text);border-color:var(--red-text)" onclick="deleteBin()">Delete this bin</button>
 </div>
-
 <div class="toast" id="toast"></div>
 
 <script>
@@ -938,4 +934,108 @@ function renderSummary() {
       '<div class="section-hdr">Most ordered items</div>' + top.map(function(n) {
         return '<div class="order-card" style="padding:10px 14px;margin-bottom:6px"><div style="display:flex;justify-content:space-between">' +
           '<span style="font-size:14px;font-weight:600">' + n + '</span>' +
-          '<span style="font-size:12px;color:var(--text2)">x' + totals[n].count + ' &middo
+          '<span style="font-size:12px;color:var(--text2)">x' + totals[n].count + ' &middot; $' + totals[n].spend.toFixed(2) + '</span></div></div>';
+      }).join('') : '';
+  });
+}
+
+// ── Bins / Drawers ──────────────────────────────────────────────
+var currentBins = [];
+var editingBinId = null;
+
+function loadBins() {
+  var el = document.getElementById('bins-list');
+  el.innerHTML = '<div class="loading"><span class="spinner"></span>Loading...</div>';
+  sb.from('bins').select('*').eq('location_id', currentLocationId).order('bin_name').then(function(result) {
+    currentBins = result.data || [];
+    renderBins(currentBins);
+  });
+}
+
+function renderBins(bins) {
+  var el = document.getElementById('bins-list');
+  if (!bins.length) { el.innerHTML = '<div class="empty">No bins added yet.<br>Tap &quot;+ Add Bin&quot; to get started.</div>'; return; }
+  el.innerHTML = bins.map(function(b) {
+    var parts = (b.parts || '').split('\n').map(function(p){ return p.trim(); }).filter(Boolean);
+    var bStr = JSON.stringify(b).replace(/'/g, "\x27");
+    return '<div class="card" style="margin-bottom:10px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">' +
+      '<span style="font-weight:600;font-size:15px">' + b.bin_name + '</span>' +
+      '<button class="del-btn" onclick="openEditBin(' + bStr + ')" style="font-size:14px">&#9998;</button></div>' +
+      (b.notes ? '<div style="font-size:12px;color:var(--text2);margin-bottom:6px">' + b.notes + '</div>' : '') +
+      '<div style="font-size:12px;color:var(--text2)">' + parts.length + ' part' + (parts.length !== 1 ? 's' : '') + '</div>' +
+      '<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px">' +
+      parts.slice(0,10).map(function(p){ return '<span style="font-size:11px;padding:2px 8px;border-radius:99px;background:var(--blue-bg);color:var(--blue-text)">' + p + '</span>'; }).join('') +
+      (parts.length > 10 ? '<span style="font-size:11px;padding:2px 8px;border-radius:99px;background:var(--bg2);color:var(--text2)">+' + (parts.length-10) + ' more</span>' : '') +
+      '</div></div>';
+  }).join('');
+}
+
+function searchBins() {
+  var q = document.getElementById('bins-search').value.trim().toLowerCase();
+  var el = document.getElementById('bins-search-result');
+  if (!q) { el.innerHTML = ''; renderBins(currentBins); return; }
+  var matches = [];
+  currentBins.forEach(function(b) {
+    var parts = (b.parts || '').split('\n').map(function(p){ return p.trim().toLowerCase(); }).filter(Boolean);
+    var found = parts.filter(function(p){ return p.indexOf(q) >= 0; });
+    if (found.length) matches.push({ bin: b, matched: found });
+  });
+  if (!matches.length) {
+    el.innerHTML = '<div style="background:var(--amber-bg);color:var(--amber-text);border-radius:var(--radius);padding:10px 14px;font-size:13px;margin-bottom:8px">No bins found containing &quot;' + q + '&quot;</div>';
+  } else {
+    el.innerHTML = '<div style="background:var(--green-bg);color:var(--green-text);border-radius:var(--radius);padding:10px 14px;font-size:13px;margin-bottom:8px">' +
+      matches.map(function(m){ return '<strong>' + m.bin.bin_name + '</strong>' + (m.bin.notes ? ' — ' + m.bin.notes : ''); }).join('<br>') + '</div>';
+  }
+  renderBins(matches.length ? matches.map(function(m){ return m.bin; }) : currentBins);
+}
+
+function openAddBin() {
+  editingBinId = null;
+  document.getElementById('add-bin-title').textContent = 'Add Bin / Drawer';
+  document.getElementById('bin-name').value = '';
+  document.getElementById('bin-parts').value = '';
+  document.getElementById('bin-notes').value = '';
+  document.getElementById('delete-bin-btn').style.display = 'none';
+  showScreen('s-add-bin');
+}
+
+function openEditBin(b) {
+  editingBinId = b.id;
+  document.getElementById('add-bin-title').textContent = 'Edit Bin / Drawer';
+  document.getElementById('bin-name').value = b.bin_name || '';
+  document.getElementById('bin-parts').value = b.parts || '';
+  document.getElementById('bin-notes').value = b.notes || '';
+  document.getElementById('delete-bin-btn').style.display = '';
+  showScreen('s-add-bin');
+}
+
+function saveBin() {
+  var name = document.getElementById('bin-name').value.trim();
+  if (!name) { document.getElementById('bin-name').focus(); return; }
+  var data = { location_id: currentLocationId, account_id: currentAccountId, bin_name: name, parts: document.getElementById('bin-parts').value.trim(), notes: document.getElementById('bin-notes').value.trim() };
+  var op = editingBinId ? sb.from('bins').update(data).eq('id', editingBinId) : sb.from('bins').insert(data);
+  op.then(function(result) {
+    if (result.error) { showToast('Error saving bin'); return; }
+    showToast(editingBinId ? 'Bin updated!' : 'Bin saved!');
+    showScreen('s-orders'); showOrderTab('bins');
+  });
+}
+
+function deleteBin() {
+  if (!editingBinId) return;
+  sb.from('bins').delete().eq('id', editingBinId).then(function(result) {
+    if (result.error) { showToast('Error deleting'); return; }
+    showToast('Bin deleted'); editingBinId = null; showScreen('s-orders'); showOrderTab('bins');
+  });
+}
+// ── End Bins ────────────────────────────────────────────────────
+
+
+var savedParts = [];
+var editingPartId = null;
+
+loadAccounts();
+</script>
+</body>
+</html>
