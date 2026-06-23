@@ -477,7 +477,7 @@ async function deletePart(id) {
   showToast('Deleted'); loadSavedParts();
 }
 
-loadAccounts(); }
+loadAccounts();
 function gotoCollision() {
   var a = accounts.find(function(x){ return x.id == currentAccountId; });
   var isDealer = a && a.type === 'dealership';
@@ -1039,3 +1039,4 @@ loadAccounts();
 </script>
 </body>
 </html>
+  
