@@ -81,205 +81,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 20px;border-radius:99px;font-size:13px;font-weight:500;z-index:999;opacity:0;transition:opacity 0.2s;pointer-events:none;white-space:nowrap}
 .toast.show{opacity:1}
 </style>
-</head>
-<body>
-<div class="app">
-
-<div id="s-home" class="screen active">
-  <div class="header"><h1>My accounts</h1></div>
-  <div class="seg">
-    <button class="seg-btn active" onclick="setFilter('all')">All</button>
-    <button class="seg-btn" onclick="setFilter('dealership')">Dealerships</button>
-    <button class="seg-btn" onclick="setFilter('collision')">Collision</button>
-  </div>
-  <div id="account-list"><div class="loading"><span class="spinner"></span>Loading...</div></div>
-  <div class="btn-grid">
-    <button class="btn" onclick="gotoAddAccount('dealership')">+ Dealership</button>
-    <button class="btn btn-primary" onclick="gotoAddAccount('collision')">+ Collision center</button>
-  </div>
-  <button class="btn" style="margin-top:10px;background:var(--purple-bg);color:var(--purple-text);border-color:var(--purple-text);" onclick="gotoParts()">&#128269; Parts Lookup &amp; Database</button>
-</div>
-
-<div id="s-add-account" class="screen">
-  <div class="header">
-    <button class="back-btn" onclick="goHome()">&#8592; Back</button>
-    <h1 id="add-acct-title">Add account</h1>
-  </div>
-  <div id="collision-note" class="info-box" style="display:none">You can add individual locations after saving.</div>
-  <div class="form-group"><label>Name</label><input type="text" id="a-name" placeholder="e.g. Valley Ford"/></div>
-  <div class="form-group"><label>Contact name (optional)</label><input type="text" id="a-contact"/></div>
-  <div class="form-group"><label>Phone (optional)</label><input type="text" id="a-phone"/></div>
-  <div class="form-group"><label>Notes (optional)</label><input type="text" id="a-notes"/></div>
-  <button class="btn btn-primary" onclick="saveAccount()">Save</button>
-</div>
-
-<div id="s-collision" class="screen">
-  <div class="header">
-    <button class="back-btn" onclick="goHome()">&#8592; All accounts</button>
-    <h1 id="collision-title"></h1>
-  </div>
-  <div class="section-hdr" id="loc-section-hdr">Locations</div>
-  <div id="loc-list"><div class="loading"><span class="spinner"></span>Loading...</div></div>
-  <button class="btn btn-primary" id="add-loc-btn" onclick="gotoAddLocation()">+ Add location</button>
-</div>
-
-<div id="s-add-location" class="screen">
-  <div class="header">
-    <button class="back-btn" onclick="gotoCollision()">&#8592; Back</button>
-    <h1>Add location</h1>
-  </div>
-  <div class="form-group"><label>Location name</label><input type="text" id="l-name" placeholder="e.g. South Shop, Parts Counter"/></div>
-  <div class="form-group"><label>Address (optional)</label><input type="text" id="l-address"/></div>
-  <div class="form-group"><label>Contact name (optional)</label><input type="text" id="l-contact"/></div>
-  <div class="form-group"><label>Phone (optional)</label><input type="text" id="l-phone"/></div>
-  <button class="btn btn-primary" onclick="saveLocation()">Save location</button>
-</div>
-
-<div id="s-orders" class="screen">
-  <div class="header">
-    <button class="back-btn" id="orders-back-btn" onclick="ordersBack()">&#8592; Back</button>
-    <div style="flex:1">
-      <div class="breadcrumb" id="orders-breadcrumb"></div>
-      <h1 id="orders-title" style="font-size:18px"></h1>
-    </div>
-  </div>
-  <div class="tabs">
-    <button class="tab active" onclick="showOrderTab('import')">Import</button>
-    <button class="tab" onclick="showOrderTab('add')">+ Add</button>
-    <button class="tab" onclick="showOrderTab('history')">History</button>
-    <button class="tab" onclick="showOrderTab('reorder')">Reorder</button>
-    <button class="tab" onclick="showOrderTab('summary')">Summary</button>
-    <button class="tab" onclick="showOrderTab('bins')">Bins</button>
-  </div>
-  <div id="otab-import">
-    <div class="info-box">Paste your order from the company app and click Parse to extract all items automatically.</div>
-    <div id="import-paste-view">
-      <div class="form-group"><label>Order date</label><input type="date" id="import-date"/></div>
-      <div class="form-group"><label>Paste order text</label><textarea id="import-text" placeholder="Paste your order here..."></textarea></div>
-      <button class="btn btn-primary" onclick="parseImport()">Parse order</button>
-    </div>
-    <div id="import-loading" style="display:none"><div class="loading"><span class="spinner"></span>Reading your order...</div></div>
-    <div id="import-preview" style="display:none">
-      <div class="section-hdr">Review items — uncheck to skip</div>
-      <div id="preview-list"></div>
-      <div class="btn-grid" style="margin-top:12px">
-        <button class="btn" onclick="resetImport()">&#8592; Back</button>
-        <button class="btn btn-success" onclick="confirmImport()">Import all</button>
-      </div>
-    </div>
-  </div>
-  <div id="otab-add" style="display:none">
-    <div class="form-group"><label>Item name</label><input type="text" id="item-name" placeholder="e.g. Oil filter"/></div>
-    <div class="form-group"><label>Category</label>
-      <select id="item-cat"><option>Parts</option><option>Fluids</option><option>Tools</option><option>Cleaning</option><option>Safety</option><option>Other</option></select>
-    </div>
-    <div class="row2">
-      <div class="form-group"><label>Quantity</label><input type="number" id="item-qty" placeholder="1" min="1" step="1"/></div>
-      <div class="form-group"><label>Price ($)</label><input type="number" id="item-price" placeholder="0.00" min="0" step="0.01"/></div>
-    </div>
-    <div class="form-group"><label>Date</label><input type="date" id="item-date"/></div>
-    <div class="form-group"><label>Notes (optional)</label><input type="text" id="item-notes"/></div>
-    <button class="btn btn-primary" onclick="addOrder()">Save order</button>
-  </div>
-  <div id="otab-history" style="display:none">
-    <div class="seg" style="margin-bottom:10px">
-      <button class="seg-btn active" id="view-btn-date" onclick="setHistoryView('date')">By date</button>
-      <button class="seg-btn" id="view-btn-item" onclick="setHistoryView('item')">By item</button>
-    </div>
-    <div class="form-group" style="display:flex;gap:8px">
-      <input type="text" id="history-search" placeholder="Search item or part number..." oninput="renderHistory()" style="flex:1"/>
-      <select id="filter-cat" onchange="renderHistory()" style="width:auto;flex:1">
-        <option value="">All categories</option>
-        <option>Parts</option><option>Fluids</option><option>Tools</option><option>Cleaning</option><option>Safety</option><option>Other</option>
-      </select>
-    </div>
-    <div id="history-list"></div>
-  </div>
-  <div id="otab-reorder" style="display:none">
-    <div class="info-box">AI suggestions based on this account's order history.</div>
-    <div id="reorder-loading" style="display:none"><div class="loading"><span class="spinner"></span>Analyzing orders...</div></div>
-    <div id="reorder-list"></div>
-    <button class="btn" style="margin-top:4px" onclick="loadReorder()">Refresh suggestions</button>
-  </div>
-  <div id="otab-summary" style="display:none">
-    <div class="stats" id="stats-grid"></div>
-    <div id="top-items"></div>
-  </div>
-  <div id="otab-bins" style="display:none">
-    <div class="form-group" style="display:flex;gap:8px;margin-bottom:10px">
-      <input type="text" id="bins-search" placeholder="Search by part number..." style="flex:1" oninput="searchBins()"/>
-      <button class="btn btn-primary" style="margin-top:0;width:auto;padding:10px 16px;" onclick="searchBins()">Find</button>
-    </div>
-    <div id="bins-search-result" style="margin-bottom:10px"></div>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-      <span style="font-size:13px;font-weight:600;color:var(--text2)">Bins &amp; Drawers</span>
-      <button class="btn btn-primary" style="margin-top:0;width:auto;padding:8px 14px;font-size:12px;" onclick="openAddBin()">+ Add Bin</button>
-    </div>
-    <div id="bins-list"><div class="loading"><span class="spinner"></span>Loading...</div></div>
-  </div>
-</div>
-
-</div>
-<div id="s-parts" class="screen">
-  <div class="header">
-    <button class="back-btn" onclick="goHome()">&#8592; All accounts</button>
-    <h1>Parts lookup</h1>
-  </div>
-  <div class="seg">
-    <button class="seg-btn active" id="parts-btn-search" onclick="setPartsView('search')">Search</button>
-    <button class="seg-btn" id="parts-btn-saved" onclick="setPartsView('saved')">My database</button>
-  </div>
-  <div id="parts-search-view">
-    <div class="info-box">Search Crest Industries by part number, description, or OEM number. Save parts to build your personal database.</div>
-    <div class="form-group" style="display:flex;gap:8px">
-      <input type="text" id="parts-search-input" placeholder="e.g. CRX5114, push retainer, 15289020..." style="flex:1" onkeydown="if(event.key==='Enter') searchParts()"/>
-      <button class="btn btn-primary" style="margin-top:0;width:auto;padding:10px 16px;" onclick="searchParts()">Search</button>
-    </div>
-    <div id="parts-search-results"></div>
-  </div>
-  <div id="parts-saved-view" style="display:none">
-    <div class="form-group">
-      <input type="text" id="parts-db-search" placeholder="Search your saved parts..." oninput="filterSavedParts()"/>
-    </div>
-    <div id="parts-saved-list"><div class="loading"><span class="spinner"></span>Loading...</div></div>
-    <button class="btn btn-primary" style="margin-top:8px" onclick="openAddPart(null,'')">+ Add part manually</button>
-  </div>
-</div>
-
-<div id="s-add-part" class="screen">
-  <div class="header">
-    <button class="back-btn" onclick="showScreen('s-parts');setPartsView('saved')">&#8592; Back</button>
-    <h1 id="add-part-title">Save part</h1>
-  </div>
-  <div class="form-group"><label>Part number</label><input type="text" id="p-number" placeholder="e.g. CRX5114"/></div>
-  <div class="form-group"><label>Description</label><input type="text" id="p-desc" placeholder="e.g. 20MM Push-Type Retainer GM/Ford/Chry"/></div>
-  <div class="form-group"><label>Category</label>
-    <select id="p-cat">
-      <option>Push-Type Retainers</option><option>Grille Clips</option><option>Plastic Nuts</option>
-      <option>Plastic Grommets</option><option>Rivets</option><option>Fasteners</option>
-      <option>Tools</option><option>Chemicals</option><option>Safety</option><option>Other</option>
-    </select>
-  </div>
-  <div class="form-group"><label>OEM / Cross-reference numbers (optional)</label><input type="text" id="p-oem" placeholder="e.g. GM 21030249, Ford N807389S"/></div>
-  <div class="form-group"><label>Notes (optional)</label><input type="text" id="p-notes" placeholder="e.g. Used at Valley Ford North Shop"/></div>
-  <div class="form-group"><label>Source</label><input type="text" id="p-source" value="Crest Industries"/></div>
-  <button class="btn btn-primary" onclick="savePart()">Save to database</button>
-</div>
-
-<div id="s-add-bin" class="screen">
-  <div class="header">
-    <button class="back-btn" onclick="showScreen('s-orders');showOrderTab('bins')">&#8592; Back</button>
-    <h1 id="add-bin-title">Add Bin / Drawer</h1>
-  </div>
-  <div class="form-group"><label>Bin / Drawer name</label><input type="text" id="bin-name" placeholder="e.g. Drawer A1, Bin 3, Top Shelf"/></div>
-  <div class="form-group"><label>Part numbers (one per line)</label><textarea id="bin-parts" placeholder="e.g.&#10;CRX5114&#10;CRX2201" style="min-height:200px"></textarea></div>
-  <div class="form-group"><label>Notes (optional)</label><input type="text" id="bin-notes" placeholder="e.g. Push-type retainers"/></div>
-  <button class="btn btn-primary" onclick="saveBin()">Save</button>
-  <button class="btn" id="delete-bin-btn" style="display:none;margin-top:8px;color:var(--red-text);border-color:var(--red-text)" onclick="deleteBin()">Delete this bin</button>
-</div>
-<div class="toast" id="toast"></div>
-
 <script>
+document.addEventListener("DOMContentLoaded", function() {
 var SUPABASE_URL = 'https://slzxwtcarpbusdfqjhzt.supabase.co';
 var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsenh3dGNhcnBidXNkZnFqaHp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5Mzc4OTIsImV4cCI6MjA5MzUxMzg5Mn0.Tp6O5k0R1UpLRqB6p7cPkjBjXdPXxmVgPdFK1aSjERM';
 var sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -324,6 +127,306 @@ function showScreen(id) {
 
 function goHome() { showScreen('s-home'); loadAccounts(); }
 
+var allBins = [];
+
+// Hardcoded bin data for WV -West (Bins 1-11)
+var WV_WEST_BINS = {
+  'Bin 1': [
+    {part_number:'CRX2802', description:'7/16 Fascia Retainer Ford - Mustang & Capri'},
+    {part_number:'CRX30008', description:'GM Bumper Fascia Retainer - Pontiac Grand Am 1999+'},
+    {part_number:'CRX500', description:'3/4 Trim Panel Retainer GM/Chry - Vans 1987+'},
+    {part_number:'CRX462', description:'11/16 Fender and Bumper Shield Retainer'},
+    {part_number:'CRX4520', description:'Fender and Bumper Shield Retainer - Radiator Yoke'},
+    {part_number:'CRX4036', description:'13MM Retainer Honda - Honda 9066-SA0-0030'},
+    {part_number:'CRX465', description:'7/8 Front End Stone Shield Retainer GM'},
+    {part_number:'CRX464', description:'1IN Fascia to Bumper Retainer Ford'},
+    {part_number:'CRX463', description:'1IN Radiator Apron Panel Retainer GM'},
+    {part_number:'CRX4804', description:'7/16 Weatherstrip Fastener GM/Ford/AMC'},
+    {part_number:'CRX19660', description:'19MM Bumper Cover Retainer Lexus/Toyota'},
+    {part_number:'CRX4814', description:'5/8 Trim Panel Retainer Ford/Chrysler'},
+    {part_number:'CRX4670', description:'1IN Trim Panel Retainer Ford'},
+    {part_number:'CRX17716', description:'22MM Fender Liner Retainer Ford - Mustang 2002+'},
+    {part_number:'CRX604', description:'1/2 Heat Shield Retainer Ford'},
+    {part_number:'CRX29322', description:'15MM Trim Panel Retainer Mazda'},
+    {part_number:'CRX130', description:'11/16 Shield Retainer GM/Ford/Chry'},
+    {part_number:'CRX127', description:'1IN Door Frame Spacer Retainer Chry/Ford'},
+    {part_number:'CRX15548', description:'Ford Mud Flap Retainer 1997+'}
+  ],
+  'Bin 2': [
+    {part_number:'CRX19902', description:'20MM Front Bumper Push-Type Ret Honda - Civic 2006+'},
+    {part_number:'CRX20604', description:'20MM Bumper Push-Type Retainer Acura'},
+    {part_number:'CRX20826', description:'20MM Push-Type Retainer Honda - Honda 2010+'},
+    {part_number:'CRX11644', description:'20MM Bumper Push-Type Retainer Acura'},
+    {part_number:'CRX13776', description:'20MM Bumper Push-Type Retainer Acura'},
+    {part_number:'CRX11069', description:'20MM Bumper/Wheel Well Push-Type Acura'},
+    {part_number:'CRX11904', description:'20MM Fender/Bumper Push-Type Ret Mitsubishi'},
+    {part_number:'CRX12264', description:'20MM Fender Push-Type Retainer Honda'},
+    {part_number:'CRX17148', description:'18MM Fender & Bumper Push-Type Retainer Honda & Mitsubishi'},
+    {part_number:'CRX12766', description:'20MM Push-Type Retainer Nissan'},
+    {part_number:'CRX17778', description:'18MM Bumper Clip Push-Type Retainer Nissan'},
+    {part_number:'CRX11244', description:'18MM Bumper Push-Type Retainer Nissan'},
+    {part_number:'CRX20469', description:'Nissan and Infinity Push Type Retainer'},
+    {part_number:'CRX19160', description:'20MM Bumper and Radiator Push-Type Ret Nissan'},
+    {part_number:'CRX20800', description:'20MM Cowl/Bumper/Fender Push-Type Ret Nissan'},
+    {part_number:'CRX19788', description:'20MM Eng Cover Push-Type Ret Toyota'},
+    {part_number:'CRX14024', description:'20MM Fender Push-Type Ret Toyota'},
+    {part_number:'CRX17832', description:'18MM Bumper Push-Type Ret Toyota'},
+    {part_number:'CRX19900', description:'#8 Fender Apron Screw Grommet Honda'},
+    {part_number:'CRX18692', description:'18MM Front Fender Push-Type Ret Lexus'},
+    {part_number:'CRX20594', description:'19MM Radiator/Grille Push-Type Ret Lexus'},
+    {part_number:'CRX17302', description:'20MM Splash Shield Push-Type Ret Toyota'},
+    {part_number:'CRX30748', description:'Honda Trunk Interior and Side Push Ret'},
+    {part_number:'CRX29472', description:'20MM Fender Push-Type Ret Honda - Honda Civic 2012+'}
+  ],
+  'Bin 3': [
+    {part_number:'CRX17052', description:'10MM Radiator Push-Type Ret Mercedes'},
+    {part_number:'CRX17686', description:'20MM Bumper/Wheel Push-Type Retainer BMW'},
+    {part_number:'CRX17068', description:'20MM Bumper Push-Type Retainer BMW'},
+    {part_number:'CRX17322', description:'20MM Push-Type Retainer Mercedes'},
+    {part_number:'CRX20100', description:'16MM Push-Type Retainer Mercedes'},
+    {part_number:'CRX29650', description:'18MM Bumper Push-Type Ret Chrysler'},
+    {part_number:'CRX18372', description:'18MM Bumper Cover Push-Type Ret Mitsubishi'},
+    {part_number:'CRX12324', description:'23/32 Fascia Push-Type Retainer Chrysler'},
+    {part_number:'CRX5128', description:'14MM Push-Type Retainer GM'},
+    {part_number:'CRX30743', description:'GM Air Dam Fender Flares Push Type Ret'},
+    {part_number:'CRX492', description:'1IN Splash Shield Fascia Push-Type Ret'},
+    {part_number:'CRX26673', description:'GM Push Type Retainer - Chevrolet Colorado & SS'},
+    {part_number:'CRX5082', description:'11/16 Body Push-Type Retainer GM/Ford'},
+    {part_number:'CRX30309', description:'Chrysler Push Type Retainer'},
+    {part_number:'CRX14540', description:'13MM Front Air Deflector Grommet GM'},
+    {part_number:'CRX14538', description:'18MM Front Air Deflector Retainer GM'}
+  ],
+  'Bin 4': [
+    {part_number:'CRX19640', description:'19MM Fender Apron Push-Type Ret GM'},
+    {part_number:'CRX19592', description:'18MM Fender Push-Type Ret GM/Chry'},
+    {part_number:'CRX19654', description:'18MM Bumper Fascia Push-Type Ret GM'},
+    {part_number:'CRX19656', description:'20MM Fender Push-Type Retainer GM'},
+    {part_number:'CRX5114', description:'20MM Push-Type Retainer GM/Ford/Chry'},
+    {part_number:'CRX20046', description:'18MM Air Distributor Push-Type Retainer'},
+    {part_number:'CRX20044', description:'18MM Air Dam Push-Type Retainer GM/Ford'},
+    {part_number:'CRX20048', description:'19MM Fascia Push-Type Retainer'},
+    {part_number:'CRX20050', description:'20MM Air Dam Push-Type Retainer GM'},
+    {part_number:'CRX20052', description:'20MM Floor Panel Push-Type Ret GM'},
+    {part_number:'CRX20054', description:'25MM Push-Type Retainer GM/Ford'},
+    {part_number:'CRX20056', description:'25MM Panel Attachement Push-Type Ret'},
+    {part_number:'CRX30051', description:'GM Push Type Retainer - Chevy Caprice 2013+'},
+    {part_number:'CRX15704', description:'10/32 Wheel Opening Push-Type Retainer'},
+    {part_number:'CRX5096', description:'20MM Fascia Push-Type Retainer GM'},
+    {part_number:'CRX5116', description:'15MM Push-Type Retainer GM/Ford'},
+    {part_number:'CRX14638', description:'17MM Push-Type Retainer GM/Chrysler'},
+    {part_number:'CRX14542', description:'20MM Bumper Cover Push-Type Ret GM'},
+    {part_number:'CRX18502', description:'20MM Bumper/Fender Push-Type Ret GM'}
+  ],
+  'Bin 5': [
+    {part_number:'CRX30261', description:'Hyundai and Kia Bumper Cover Push Retain'},
+    {part_number:'CRX20146', description:'15MM Push-Type Retainer Toyota'},
+    {part_number:'CRX20498', description:'18MM Rocker Moulding Push-Type Ret'},
+    {part_number:'CRX20606', description:'16MM Interior Trim Push-Type Ret Honda'},
+    {part_number:'CRX29307', description:'Toyota Lexus Push Type Retainer'},
+    {part_number:'CRX17512', description:'16MM Bumper Fascia Push-Type Ret Nissan'},
+    {part_number:'CRX29884', description:'15MM Cowl/Bumper Push-Type Ret Hyundai'},
+    {part_number:'CRX30249', description:'Lexus & Toyota Push Type Retainer'},
+    {part_number:'CRX30322', description:'Hyundai Kia Splash Shield Nylon Nut'},
+    {part_number:'CRX3104', description:'18MM Push-Type Retainer Toyota/Nissan'},
+    {part_number:'CRX29309', description:'15MM Push-Type Retainer Mitsubishi'},
+    {part_number:'CRX30683', description:'Subaru Push Type Retainer Black Nylon Front Fender'},
+    {part_number:'CRX21562', description:'Subaru Push Type Retainer Front & Rear Bumper'},
+    {part_number:'CRX21560', description:'Subaru Push Type Retainer Front & Rear Bumper'},
+    {part_number:'CRX19251', description:'Hyundai Fender Liner Push Type Retainer'},
+    {part_number:'CRX17766', description:'16MM Luggage Comp Trim Ret Toyota'},
+    {part_number:'CRX29995', description:'20MM Bumper/Fender Push-Type Ret Subaru'},
+    {part_number:'CRX4128', description:'20MM Push-Type Retainer Honda/Nissan'},
+    {part_number:'CRX21561', description:'Subaru Push Type Retainer - Subaru BRZ Crosstrek'},
+    {part_number:'CRX20932', description:'20MM Bumper/Quarter Panel Push-Type Ret Subaru'},
+    {part_number:'CRX20928', description:'20MM Bumper/Eng Push-Type Ret Subaru'}
+  ],
+  'Bin 6': [
+    {part_number:'CRX3098', description:'15MM Push-Type Retainer Toyota/Mazda'},
+    {part_number:'CRX6986', description:'20MM Fender Push-Type Retainer Honda'},
+    {part_number:'CRX4282', description:'18MM Push-Type Retainer Mazda/Ford'},
+    {part_number:'CRX20524', description:'Kia Push-Type Retainer Black Nylon'},
+    {part_number:'CRX4142', description:'20MM Bumper Push-Type Retainer Front & Rear'},
+    {part_number:'CRX15432', description:'Bumper Cover Push-Type Ret Toyota'},
+    {part_number:'CRX20464', description:'10MM Fascia Push-Type Retainer Toyota'},
+    {part_number:'CRX14382', description:'16MM Cowl Panel Push-Type Ret Toyota'},
+    {part_number:'CRX2742', description:'15MM Push-Type Ret Honda/Nissan'},
+    {part_number:'CRX472', description:'20MM Push-Type Retainer Honda/Nissan/Mazda'},
+    {part_number:'CRX29844', description:'18MM Engine/Fender Push-Type Ret Subaru'},
+    {part_number:'CRX4138', description:'20MM Bumper Push-Type Retainer Honda'},
+    {part_number:'CRX473', description:'20MM Inner Fender Push-Type Retainer'},
+    {part_number:'CRX4420', description:'14MM Cowl Panel Push-Type Retainer Nissan'},
+    {part_number:'CRX29319', description:'20MM Push Type Retainer Subaru'},
+    {part_number:'CRX17348', description:'20MM Hood & Trunk Push-Type Retainer BMW'},
+    {part_number:'CRX25746', description:'20MM Bumper/Grille Push-Type Ret Nissan'},
+    {part_number:'CRX20466', description:'14MM Interior Trim Push-Type Ret Toyota'},
+    {part_number:'CRX29842', description:'20MM Moulding Push-Type Retainer Subaru'},
+    {part_number:'CRX5166', description:'1/4 Push-Type Retainer GM'},
+    {part_number:'CRX471', description:'11/16 Radiat Shroud Push-Type Retainer'}
+  ],
+  'Bin 7': [
+    {part_number:'CRX6544', description:'5X15MM Weatherstrip Retainer Ford'},
+    {part_number:'CRX12590', description:'5X15MM Weatherstrip Retainer Honda'},
+    {part_number:'CRX10932', description:'12MM Trunk Moulding Retaining Clip Honda'},
+    {part_number:'CRX22307', description:'Honda Retaining Clip - Honda Civic 2016+'},
+    {part_number:'CRX4062', description:'10MM Hood Insulating Retaining Clip'},
+    {part_number:'CRX6546', description:'1/4X21/32 Weatherstrip Retainer GM/Chry'},
+    {part_number:'CRX25466', description:'6MM Weatherstrip Retainer Nissan'},
+    {part_number:'CRX21295', description:'10MM Weatherstrip Retaining Clip Nissan'},
+    {part_number:'CRX25699', description:'Mazda Weatherstrip Retaining Clip 2007+'},
+    {part_number:'CRX8662', description:'13MM Hood Seal Retaining Clip Toyota/GM'},
+    {part_number:'CRX9794', description:'5X15MM Weatherstrip Retainer Honda'},
+    {part_number:'CRX30176', description:'Ford Weatherstrip Retainer - Ford Explorer 2014+'},
+    {part_number:'CRX6540', description:'10MM Door Weatherstrip Retainer GM/Chry'},
+    {part_number:'CRX485', description:'13MM Retaining Clip Nissan/Toyota'},
+    {part_number:'CRX19742', description:'Ford Weatherstrip Clip Dusk Nylon'},
+    {part_number:'CRX15290', description:'11MM Hood Seal Retaining Clip Honda'},
+    {part_number:'CRX21156', description:'Ford Weatherstrip Retainer Yellow Nylon'},
+    {part_number:'CRX30017', description:'Hyundai Retainer Black Nylon - Hyundai Accent 2011+'},
+    {part_number:'CRX15524', description:'15MM Weatherstrip Retainer White Nylon - Windstar 1995+'},
+    {part_number:'CRX30433', description:'GM Door Trim Applique Clip'}
+  ],
+  'Bin 8': [
+    {part_number:'CRX29460', description:'30MM Retainer Subaru'},
+    {part_number:'CRX30025', description:'Subaru Retainer 23MM - Subaru BRZ Forester'},
+    {part_number:'CRX20934', description:'30MM Hood Insulation Retainer Subaru'},
+    {part_number:'CRX4396', description:'38MM Hood Insulation Retainer Nissan'},
+    {part_number:'CRX15952', description:'30MM Hood Insulation Retainer Chrysler'},
+    {part_number:'CRX18682', description:'Hyundai Hood Insulation Retainer 26MM'},
+    {part_number:'CRX29476', description:'30MM Hood Insulation Retainer Honda'},
+    {part_number:'CRX18798', description:'30MM Hood Insulation Retainer Honda'},
+    {part_number:'CRX26675', description:'GM Hood Insulation Retainer 32MM'},
+    {part_number:'CRX29111', description:'30MM Hood Insulation Retainer GM - Chevy Cruze 2011+'},
+    {part_number:'CRX9136', description:'30MM Hood Insulation Retainer GM'},
+    {part_number:'CRX12798', description:'25MM Hood Insulation Retainer Toyota'},
+    {part_number:'CRX3116', description:'30MM Retaining Clip Toyota'},
+    {part_number:'CRX9066', description:'30MM Hood Insulation Retainer Toyota'},
+    {part_number:'CRX20708', description:'Toyota Hood Insulation Retainer 24MM'}
+  ],
+  'Bin 9': [
+    {part_number:'CRX19462', description:'17MM Rocker Moulding Clip Toyota'},
+    {part_number:'CRX19460', description:'17MM Wheel Flare Moulding Clip Toyota'},
+    {part_number:'CRX17978', description:'17MM Fender Moulding Clip Toyota Blue Nylon'},
+    {part_number:'CRX17980', description:'17MM Fender Moulding Clip Toyota Red Nylon'},
+    {part_number:'CRX3080', description:'15MM Moulding Clip W/Sealer Toyota/GM'},
+    {part_number:'CRX30214', description:'Toyota Rocker Moulding Retainer With Sealer'},
+    {part_number:'CRX15870', description:'5/8X3/4 Rocker Panel Moulding Clip GM'},
+    {part_number:'CRX18792', description:'12X24MM Rocker Moulding Clip GM'},
+    {part_number:'CRX20534', description:'15X15MM Fender Moulding Clip GM Green Nylon'},
+    {part_number:'CRX17792', description:'13/16 Rocker Panel Moulding Clip White Nylon'},
+    {part_number:'CRX29453', description:'16MM Bumper Moulding Clip GM'},
+    {part_number:'CRX20724', description:'20MM Rocker Moulding Clip GM'},
+    {part_number:'CRX22323', description:'Ford Moulding Clip White Nylon'},
+    {part_number:'CRX25891', description:'Hyundai and Kia Moulding Clip With Sealer'},
+    {part_number:'CRX30252', description:'Kia Moulding Clip With Sealer Red Nylon'},
+    {part_number:'CRX30340', description:'Kia Fender and Flare Moulding Clip White Nylon'},
+    {part_number:'CRX29887', description:'15X15MM Rocker Moulding Clip Hyundai'},
+    {part_number:'CRX21422', description:'12X20MM Rocker Moulding Clip GM Gray Nylon'},
+    {part_number:'CRX20522', description:'10X12MM Moulding Clip Hyundai'},
+    {part_number:'CRX29889', description:'16X18MM Moulding Clip Hyundai'},
+    {part_number:'CRX21436', description:'Nissan Moulding Clip W/Sealer 10/PKG'},
+    {part_number:'CRX20808', description:'Infiniti Nissan Rocker Panel Moulding Clip'},
+    {part_number:'CRX30097', description:'17MM Nissan Moulding Clip With Sealer'},
+    {part_number:'CRX30114', description:'Rocker Pillare Push Type Retainer - Subaru Legacy & Outback'}
+  ],
+  'Bin 10': [
+    {part_number:'CRX16872', description:'Toyota Scuff Plate Retainer - Celica 1993+'},
+    {part_number:'CRX30055', description:'Toyota Moulding Clip With Sealer'},
+    {part_number:'CRX18324', description:'18MM Trim Panel Retainer Toyota'},
+    {part_number:'CRX30093', description:'GM Door Panel Retainer'},
+    {part_number:'CRX30159', description:'GM Door Panel Retainer Yellow Nylon'},
+    {part_number:'CRX3084', description:'18MM Door Panel Retainer'},
+    {part_number:'CRX12426', description:'20MM Door Trim Panel Retainer Chrysler'},
+    {part_number:'CRX8942', description:'23/32 Trim Panel Retainer Chrysler'},
+    {part_number:'CRX16698', description:'18MM Trim Panel Retainer Toyota'},
+    {part_number:'CRX30092', description:'GM Retainer With Sealer Yellow Nylon'},
+    {part_number:'CRX26668', description:'GM Moulding Clip With Metal Reinforcement Red Nylon'},
+    {part_number:'CRX26666', description:'GM Moulding Clip With Metal Reinforcement Blue Nylon'},
+    {part_number:'CRX28456', description:'18MM Tail Light Retainer Chrysler'},
+    {part_number:'CRX30235', description:'Ford Moulding Retainer With Sealer White Nylon'},
+    {part_number:'CRX470', description:'25/32 Door Trim Panel Retainer Ford'},
+    {part_number:'CRX29474', description:'15MM Trim Panel Retainer Honda'},
+    {part_number:'CRX20530', description:'18MM Pillar Push-Type Retainer Honda'},
+    {part_number:'CRX30198', description:'Honda Interior Trim Push Type Retainer'},
+    {part_number:'CRX18684', description:'16MM Door Trim Panel Retainer Chry'}
+  ],
+  'Bin 11': [
+    {part_number:'CRX16872', description:'Toyota Scuff Plate Retainer - Celica 1993+'},
+    {part_number:'CRX30055', description:'Toyota Moulding Clip With Sealer'},
+    {part_number:'CRX18324', description:'18MM Trim Panel Retainer Toyota'},
+    {part_number:'CRX30093', description:'GM Door Panel Retainer'},
+    {part_number:'CRX30159', description:'GM Door Panel Retainer Yellow Nylon'},
+    {part_number:'CRX3084', description:'18MM Door Panel Retainer'},
+    {part_number:'CRX12426', description:'20MM Door Trim Panel Retainer Chrysler'},
+    {part_number:'CRX8942', description:'23/32 Trim Panel Retainer Chrysler'},
+    {part_number:'CRX16698', description:'18MM Trim Panel Retainer Toyota'},
+    {part_number:'CRX30092', description:'GM Retainer With Sealer Yellow Nylon'},
+    {part_number:'CRX26668', description:'GM Moulding Clip With Metal Reinforcement Red Nylon'},
+    {part_number:'CRX26666', description:'GM Moulding Clip With Metal Reinforcement Blue Nylon'},
+    {part_number:'CRX28456', description:'18MM Tail Light Retainer Chrysler'},
+    {part_number:'CRX30235', description:'Ford Moulding Retainer With Sealer White Nylon'},
+    {part_number:'CRX470', description:'25/32 Door Trim Panel Retainer Ford'},
+    {part_number:'CRX29474', description:'15MM Trim Panel Retainer Honda'},
+    {part_number:'CRX20530', description:'18MM Pillar Push-Type Retainer Honda'},
+    {part_number:'CRX30198', description:'Honda Interior Trim Push Type Retainer'},
+    {part_number:'CRX18684', description:'16MM Door Trim Panel Retainer Chry'},
+    {part_number:'CRX30433', description:'GM Door Trim Applique Clip'}
+  ]
+};
+
+function loadBins() {
+  var el = document.getElementById('bins-list');
+  var locName = document.getElementById('orders-title').textContent.trim();
+  var binData = null;
+  if (locName.replace(/\s+/g,'').toLowerCase() === 'wv-west' || locName.toLowerCase().indexOf('west') >= 0) {
+    binData = WV_WEST_BINS;
+  }
+  if (!binData) {
+    el.innerHTML = '<div class="empty">No bin data available for this location yet.</div>';
+    return;
+  }
+  allBins = binData;
+  renderBins(binData);
+}
+
+function filterBins() {
+  var search = document.getElementById('bins-search').value.trim().toLowerCase();
+  renderBins(allBins, search);
+}
+
+function renderBins(binData, search) {
+  var el = document.getElementById('bins-list');
+  if (!binData || !Object.keys(binData).length) {
+    el.innerHTML = '<div class="empty">No bin data available for this location yet.</div>';
+    return;
+  }
+  var binKeys = Object.keys(binData).sort(function(a,b) {
+    var numA = parseInt(a.replace('Bin','').trim()) || 0;
+    var numB = parseInt(b.replace('Bin','').trim()) || 0;
+    return numA - numB;
+  });
+  el.innerHTML = binKeys.map(function(binName) {
+    var items = binData[binName];
+    if (search) {
+      items = items.filter(function(p) {
+        return p.part_number.toLowerCase().indexOf(search) >= 0 ||
+               p.description.toLowerCase().indexOf(search) >= 0;
+      });
+    }
+    if (!items.length) return '';
+    return '<div style="background:var(--bg2);border-radius:var(--radius);padding:10px 14px;margin-bottom:10px;">' +
+      '<div style="font-size:13px;font-weight:600;color:var(--purple-text);margin-bottom:8px;display:flex;align-items:center;gap:8px;">' +
+      '<span style="background:var(--purple-bg);padding:3px 12px;border-radius:99px;">' + binName + '</span>' +
+      '<span style="color:var(--text2);font-weight:400;font-size:12px;">' + items.length + ' parts</span></div>' +
+      items.map(function(p) {
+        return '<div style="padding:6px 0;border-bottom:0.5px solid var(--border);font-size:13px;">' +
+          '<span style="font-weight:600;">' + p.part_number + '</span>' +
+          '<span style="color:var(--text2);font-size:12px;"> — ' + p.description + '</span>' +
+          '</div>';
+      }).join('') +
+      '</div>';
+  }).join('');
+}
+
 var savedParts = [];
 var editingPartId = null;
 
@@ -361,7 +464,7 @@ async function searchParts() {
     var results = [];
     try { results = JSON.parse(clean); } catch(e) { results = []; }
     if (!results.length) {
-      el.innerHTML = '<div class="empty">No results found.<br>Try a different search term or add manually.</div><button class="btn" style="margin-top:8px" onclick="openAddPart(null,document.getElementById(\x27parts-search-input\x27).value)">+ Add manually</button>';
+      el.innerHTML = '<div class="empty">No results found.<br>Try a different search term or add manually.</div><button class="btn" style="margin-top:8px" onclick="openAddPart(null,document.getElementById('parts-search-input').value)">+ Add manually</button>';
       return;
     }
     el.innerHTML = results.map(function(r) {
@@ -375,11 +478,11 @@ async function searchParts() {
         (r.oem_numbers ? '<div style="font-size:12px;color:var(--text2);margin-bottom:6px">OEM: ' + r.oem_numbers + '</div>' : '') +
         '<div style="display:flex;gap:8px">' +
         (r.url ? '<a href="' + r.url + '" target="_blank" style="flex:1;text-align:center;padding:8px;font-size:12px;border:0.5px solid var(--border2);border-radius:var(--radius);color:var(--blue);text-decoration:none">View on Crest &#8599;</a>' : '') +
-        '<button onclick="openAddPartFromResult(' + rStr + ')" class="btn ' + (alreadySaved?'':'btn-primary') + '" style="flex:1;margin-top:0;font-size:12px;padding:8px">' + (alreadySaved?'&#10003; Saved':'+ Save') + '</button>' +
+        '<button onclick='openAddPartFromResult(' + rStr + ')' class="btn ' + (alreadySaved?'':'btn-primary') + '" style="flex:1;margin-top:0;font-size:12px;padding:8px">' + (alreadySaved?'&#10003; Saved':'+ Save') + '</button>' +
         '</div></div>';
-    }).join('') + '<button class="btn" style="margin-top:4px" onclick="openAddPart(null,document.getElementById(\x27parts-search-input\x27).value)">+ Add manually</button>';
+    }).join('') + '<button class="btn" style="margin-top:4px" onclick="openAddPart(null,document.getElementById('parts-search-input').value)">+ Add manually</button>';
   } catch(e) {
-    el.innerHTML = '<div class="empty">Search failed. Try again or add manually.</div><button class="btn" style="margin-top:8px" onclick="openAddPart(null,document.getElementById(\x27parts-search-input\x27).value)">+ Add manually</button>';
+    el.innerHTML = '<div class="empty">Search failed. Try again or add manually.</div><button class="btn" style="margin-top:8px" onclick="openAddPart(null,document.getElementById('parts-search-input').value)">+ Add manually</button>';
   }
 }
 
@@ -448,6 +551,11 @@ function filterSavedParts() {
   renderSavedParts(filtered);
 }
 
+async function loadBinsForPart(partNumber) {
+  var result = await sb.from('part_bins').select('*').eq('part_number', partNumber).order('bin_name');
+  return result.data || [];
+}
+
 function renderSavedParts(parts) {
   var el = document.getElementById('parts-saved-list');
   if (!parts.length) { el.innerHTML = '<div class="empty">No parts saved yet.<br>Use Search to find and save parts.</div>'; return; }
@@ -457,18 +565,38 @@ function renderSavedParts(parts) {
     return '<div style="font-size:12px;font-weight:600;color:var(--text2);margin:12px 0 6px">' + cat + ' (' + grouped[cat].length + ')</div>' +
       grouped[cat].map(function(p) {
         var pStr = JSON.stringify(p).replace(/'/g,"\x27");
-        return '<div class="card" style="margin-bottom:8px">' +
+        return '<div class="card" style="margin-bottom:8px" id="part-card-' + p.id + '">' +
           '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">' +
           '<span style="font-weight:600;font-size:14px">' + p.part_number + '</span>' +
           '<span style="display:flex;gap:6px;align-items:center">' +
-          '<button class="del-btn" onclick="openEditPart(' + pStr + ')" style="font-size:14px">&#9998;</button>' +
+          '<button class="del-btn" onclick='openEditPart(' + pStr + ')' style="font-size:14px">&#9998;</button>' +
           '<button class="del-btn" onclick="deletePart(' + p.id + ')">&#10005;</button></span></div>' +
           (p.description?'<div style="font-size:13px;margin-bottom:3px">'+p.description+'</div>':'') +
           (p.oem_numbers?'<div style="font-size:12px;color:var(--text2)">OEM: '+p.oem_numbers+'</div>':'') +
           (p.notes?'<div style="font-size:12px;color:var(--text2);margin-top:2px">'+p.notes+'</div>':'') +
+          '<div id="bins-' + p.id + '" style="margin-top:6px"></div>' +
           '</div>';
       }).join('');
   }).join('');
+  // Load bin locations for each part
+  parts.forEach(function(p) {
+    sb.from('part_bins').select('*').eq('part_number', p.part_number).order('location').then(function(result) {
+      var bins = result.data || [];
+      var el2 = document.getElementById('bins-' + p.id);
+      if (!el2) return;
+      if (!bins.length) { el2.innerHTML = ''; return; }
+      // Group by location
+      var byLoc = {};
+      bins.forEach(function(b) { if(!byLoc[b.location]) byLoc[b.location]=[]; byLoc[b.location].push(b.bin_name); });
+      el2.innerHTML = Object.keys(byLoc).map(function(loc) {
+        return '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">' +
+          '<span style="font-size:11px;color:var(--text2);">' + loc + ':</span>' +
+          byLoc[loc].map(function(bin) {
+            return '<span style="font-size:11px;padding:2px 8px;border-radius:99px;background:var(--purple-bg);color:var(--purple-text);">' + bin + '</span>';
+          }).join('') + '</div>';
+      }).join('');
+    });
+  });
 }
 
 async function deletePart(id) {
@@ -477,7 +605,7 @@ async function deletePart(id) {
   showToast('Deleted'); loadSavedParts();
 }
 
-loadAccounts();
+loadAccounts(); }
 function gotoCollision() {
   var a = accounts.find(function(x){ return x.id == currentAccountId; });
   var isDealer = a && a.type === 'dealership';
@@ -632,16 +760,16 @@ function setupOrderScreen() {
 }
 
 function showOrderTab(tab) {
-  ['import','add','history','reorder','summary','bins'].forEach(function(t){
+  ['import','add','history','reorder','bins','summary'].forEach(function(t){
     document.getElementById('otab-'+t).style.display = t === tab ? '' : 'none';
   });
   document.querySelectorAll('.tab').forEach(function(el,i){
-    el.classList.toggle('active', ['import','add','history','reorder','summary','bins'][i] === tab);
+    el.classList.toggle('active', ['import','add','history','reorder','bins','summary'][i] === tab);
   });
   if (tab === 'history') renderHistory();
   if (tab === 'summary') renderSummary();
   if (tab === 'reorder') loadReorder();
-  if (tab === 'bins') { document.getElementById('bins-search').value = ''; document.getElementById('bins-search-result').innerHTML = ''; loadBins(); }
+  if (tab === 'bins') loadBins();
 }
 
 function guessCategory(name) {
@@ -939,104 +1067,496 @@ function renderSummary() {
   });
 }
 
-// ── Bins / Drawers ──────────────────────────────────────────────
-var currentBins = [];
-var editingBinId = null;
+var allBins = [];
+
+// Hardcoded bin data for WV -West (Bins 1-11)
+var WV_WEST_BINS = {
+  'Bin 1': [
+    {part_number:'CRX2802', description:'7/16 Fascia Retainer Ford - Mustang & Capri'},
+    {part_number:'CRX30008', description:'GM Bumper Fascia Retainer - Pontiac Grand Am 1999+'},
+    {part_number:'CRX500', description:'3/4 Trim Panel Retainer GM/Chry - Vans 1987+'},
+    {part_number:'CRX462', description:'11/16 Fender and Bumper Shield Retainer'},
+    {part_number:'CRX4520', description:'Fender and Bumper Shield Retainer - Radiator Yoke'},
+    {part_number:'CRX4036', description:'13MM Retainer Honda - Honda 9066-SA0-0030'},
+    {part_number:'CRX465', description:'7/8 Front End Stone Shield Retainer GM'},
+    {part_number:'CRX464', description:'1IN Fascia to Bumper Retainer Ford'},
+    {part_number:'CRX463', description:'1IN Radiator Apron Panel Retainer GM'},
+    {part_number:'CRX4804', description:'7/16 Weatherstrip Fastener GM/Ford/AMC'},
+    {part_number:'CRX19660', description:'19MM Bumper Cover Retainer Lexus/Toyota'},
+    {part_number:'CRX4814', description:'5/8 Trim Panel Retainer Ford/Chrysler'},
+    {part_number:'CRX4670', description:'1IN Trim Panel Retainer Ford'},
+    {part_number:'CRX17716', description:'22MM Fender Liner Retainer Ford - Mustang 2002+'},
+    {part_number:'CRX604', description:'1/2 Heat Shield Retainer Ford'},
+    {part_number:'CRX29322', description:'15MM Trim Panel Retainer Mazda'},
+    {part_number:'CRX130', description:'11/16 Shield Retainer GM/Ford/Chry'},
+    {part_number:'CRX127', description:'1IN Door Frame Spacer Retainer Chry/Ford'},
+    {part_number:'CRX15548', description:'Ford Mud Flap Retainer 1997+'}
+  ],
+  'Bin 2': [
+    {part_number:'CRX19902', description:'20MM Front Bumper Push-Type Ret Honda - Civic 2006+'},
+    {part_number:'CRX20604', description:'20MM Bumper Push-Type Retainer Acura'},
+    {part_number:'CRX20826', description:'20MM Push-Type Retainer Honda - Honda 2010+'},
+    {part_number:'CRX11644', description:'20MM Bumper Push-Type Retainer Acura'},
+    {part_number:'CRX13776', description:'20MM Bumper Push-Type Retainer Acura'},
+    {part_number:'CRX11069', description:'20MM Bumper/Wheel Well Push-Type Acura'},
+    {part_number:'CRX11904', description:'20MM Fender/Bumper Push-Type Ret Mitsubishi'},
+    {part_number:'CRX12264', description:'20MM Fender Push-Type Retainer Honda'},
+    {part_number:'CRX17148', description:'18MM Fender & Bumper Push-Type Retainer Honda & Mitsubishi'},
+    {part_number:'CRX12766', description:'20MM Push-Type Retainer Nissan'},
+    {part_number:'CRX17778', description:'18MM Bumper Clip Push-Type Retainer Nissan'},
+    {part_number:'CRX11244', description:'18MM Bumper Push-Type Retainer Nissan'},
+    {part_number:'CRX20469', description:'Nissan and Infinity Push Type Retainer'},
+    {part_number:'CRX19160', description:'20MM Bumper and Radiator Push-Type Ret Nissan'},
+    {part_number:'CRX20800', description:'20MM Cowl/Bumper/Fender Push-Type Ret Nissan'},
+    {part_number:'CRX19788', description:'20MM Eng Cover Push-Type Ret Toyota'},
+    {part_number:'CRX14024', description:'20MM Fender Push-Type Ret Toyota'},
+    {part_number:'CRX17832', description:'18MM Bumper Push-Type Ret Toyota'},
+    {part_number:'CRX19900', description:'#8 Fender Apron Screw Grommet Honda'},
+    {part_number:'CRX18692', description:'18MM Front Fender Push-Type Ret Lexus'},
+    {part_number:'CRX20594', description:'19MM Radiator/Grille Push-Type Ret Lexus'},
+    {part_number:'CRX17302', description:'20MM Splash Shield Push-Type Ret Toyota'},
+    {part_number:'CRX30748', description:'Honda Trunk Interior and Side Push Ret'},
+    {part_number:'CRX29472', description:'20MM Fender Push-Type Ret Honda - Honda Civic 2012+'}
+  ],
+  'Bin 3': [
+    {part_number:'CRX17052', description:'10MM Radiator Push-Type Ret Mercedes'},
+    {part_number:'CRX17686', description:'20MM Bumper/Wheel Push-Type Retainer BMW'},
+    {part_number:'CRX17068', description:'20MM Bumper Push-Type Retainer BMW'},
+    {part_number:'CRX17322', description:'20MM Push-Type Retainer Mercedes'},
+    {part_number:'CRX20100', description:'16MM Push-Type Retainer Mercedes'},
+    {part_number:'CRX29650', description:'18MM Bumper Push-Type Ret Chrysler'},
+    {part_number:'CRX18372', description:'18MM Bumper Cover Push-Type Ret Mitsubishi'},
+    {part_number:'CRX12324', description:'23/32 Fascia Push-Type Retainer Chrysler'},
+    {part_number:'CRX5128', description:'14MM Push-Type Retainer GM'},
+    {part_number:'CRX30743', description:'GM Air Dam Fender Flares Push Type Ret'},
+    {part_number:'CRX492', description:'1IN Splash Shield Fascia Push-Type Ret'},
+    {part_number:'CRX26673', description:'GM Push Type Retainer - Chevrolet Colorado & SS'},
+    {part_number:'CRX5082', description:'11/16 Body Push-Type Retainer GM/Ford'},
+    {part_number:'CRX30309', description:'Chrysler Push Type Retainer'},
+    {part_number:'CRX14540', description:'13MM Front Air Deflector Grommet GM'},
+    {part_number:'CRX14538', description:'18MM Front Air Deflector Retainer GM'}
+  ],
+  'Bin 4': [
+    {part_number:'CRX19640', description:'19MM Fender Apron Push-Type Ret GM'},
+    {part_number:'CRX19592', description:'18MM Fender Push-Type Ret GM/Chry'},
+    {part_number:'CRX19654', description:'18MM Bumper Fascia Push-Type Ret GM'},
+    {part_number:'CRX19656', description:'20MM Fender Push-Type Retainer GM'},
+    {part_number:'CRX5114', description:'20MM Push-Type Retainer GM/Ford/Chry'},
+    {part_number:'CRX20046', description:'18MM Air Distributor Push-Type Retainer'},
+    {part_number:'CRX20044', description:'18MM Air Dam Push-Type Retainer GM/Ford'},
+    {part_number:'CRX20048', description:'19MM Fascia Push-Type Retainer'},
+    {part_number:'CRX20050', description:'20MM Air Dam Push-Type Retainer GM'},
+    {part_number:'CRX20052', description:'20MM Floor Panel Push-Type Ret GM'},
+    {part_number:'CRX20054', description:'25MM Push-Type Retainer GM/Ford'},
+    {part_number:'CRX20056', description:'25MM Panel Attachement Push-Type Ret'},
+    {part_number:'CRX30051', description:'GM Push Type Retainer - Chevy Caprice 2013+'},
+    {part_number:'CRX15704', description:'10/32 Wheel Opening Push-Type Retainer'},
+    {part_number:'CRX5096', description:'20MM Fascia Push-Type Retainer GM'},
+    {part_number:'CRX5116', description:'15MM Push-Type Retainer GM/Ford'},
+    {part_number:'CRX14638', description:'17MM Push-Type Retainer GM/Chrysler'},
+    {part_number:'CRX14542', description:'20MM Bumper Cover Push-Type Ret GM'},
+    {part_number:'CRX18502', description:'20MM Bumper/Fender Push-Type Ret GM'}
+  ],
+  'Bin 5': [
+    {part_number:'CRX30261', description:'Hyundai and Kia Bumper Cover Push Retain'},
+    {part_number:'CRX20146', description:'15MM Push-Type Retainer Toyota'},
+    {part_number:'CRX20498', description:'18MM Rocker Moulding Push-Type Ret'},
+    {part_number:'CRX20606', description:'16MM Interior Trim Push-Type Ret Honda'},
+    {part_number:'CRX29307', description:'Toyota Lexus Push Type Retainer'},
+    {part_number:'CRX17512', description:'16MM Bumper Fascia Push-Type Ret Nissan'},
+    {part_number:'CRX29884', description:'15MM Cowl/Bumper Push-Type Ret Hyundai'},
+    {part_number:'CRX30249', description:'Lexus & Toyota Push Type Retainer'},
+    {part_number:'CRX30322', description:'Hyundai Kia Splash Shield Nylon Nut'},
+    {part_number:'CRX3104', description:'18MM Push-Type Retainer Toyota/Nissan'},
+    {part_number:'CRX29309', description:'15MM Push-Type Retainer Mitsubishi'},
+    {part_number:'CRX30683', description:'Subaru Push Type Retainer Black Nylon Front Fender'},
+    {part_number:'CRX21562', description:'Subaru Push Type Retainer Front & Rear Bumper'},
+    {part_number:'CRX21560', description:'Subaru Push Type Retainer Front & Rear Bumper'},
+    {part_number:'CRX19251', description:'Hyundai Fender Liner Push Type Retainer'},
+    {part_number:'CRX17766', description:'16MM Luggage Comp Trim Ret Toyota'},
+    {part_number:'CRX29995', description:'20MM Bumper/Fender Push-Type Ret Subaru'},
+    {part_number:'CRX4128', description:'20MM Push-Type Retainer Honda/Nissan'},
+    {part_number:'CRX21561', description:'Subaru Push Type Retainer - Subaru BRZ Crosstrek'},
+    {part_number:'CRX20932', description:'20MM Bumper/Quarter Panel Push-Type Ret Subaru'},
+    {part_number:'CRX20928', description:'20MM Bumper/Eng Push-Type Ret Subaru'}
+  ],
+  'Bin 6': [
+    {part_number:'CRX3098', description:'15MM Push-Type Retainer Toyota/Mazda'},
+    {part_number:'CRX6986', description:'20MM Fender Push-Type Retainer Honda'},
+    {part_number:'CRX4282', description:'18MM Push-Type Retainer Mazda/Ford'},
+    {part_number:'CRX20524', description:'Kia Push-Type Retainer Black Nylon'},
+    {part_number:'CRX4142', description:'20MM Bumper Push-Type Retainer Front & Rear'},
+    {part_number:'CRX15432', description:'Bumper Cover Push-Type Ret Toyota'},
+    {part_number:'CRX20464', description:'10MM Fascia Push-Type Retainer Toyota'},
+    {part_number:'CRX14382', description:'16MM Cowl Panel Push-Type Ret Toyota'},
+    {part_number:'CRX2742', description:'15MM Push-Type Ret Honda/Nissan'},
+    {part_number:'CRX472', description:'20MM Push-Type Retainer Honda/Nissan/Mazda'},
+    {part_number:'CRX29844', description:'18MM Engine/Fender Push-Type Ret Subaru'},
+    {part_number:'CRX4138', description:'20MM Bumper Push-Type Retainer Honda'},
+    {part_number:'CRX473', description:'20MM Inner Fender Push-Type Retainer'},
+    {part_number:'CRX4420', description:'14MM Cowl Panel Push-Type Retainer Nissan'},
+    {part_number:'CRX29319', description:'20MM Push Type Retainer Subaru'},
+    {part_number:'CRX17348', description:'20MM Hood & Trunk Push-Type Retainer BMW'},
+    {part_number:'CRX25746', description:'20MM Bumper/Grille Push-Type Ret Nissan'},
+    {part_number:'CRX20466', description:'14MM Interior Trim Push-Type Ret Toyota'},
+    {part_number:'CRX29842', description:'20MM Moulding Push-Type Retainer Subaru'},
+    {part_number:'CRX5166', description:'1/4 Push-Type Retainer GM'},
+    {part_number:'CRX471', description:'11/16 Radiat Shroud Push-Type Retainer'}
+  ],
+  'Bin 7': [
+    {part_number:'CRX6544', description:'5X15MM Weatherstrip Retainer Ford'},
+    {part_number:'CRX12590', description:'5X15MM Weatherstrip Retainer Honda'},
+    {part_number:'CRX10932', description:'12MM Trunk Moulding Retaining Clip Honda'},
+    {part_number:'CRX22307', description:'Honda Retaining Clip - Honda Civic 2016+'},
+    {part_number:'CRX4062', description:'10MM Hood Insulating Retaining Clip'},
+    {part_number:'CRX6546', description:'1/4X21/32 Weatherstrip Retainer GM/Chry'},
+    {part_number:'CRX25466', description:'6MM Weatherstrip Retainer Nissan'},
+    {part_number:'CRX21295', description:'10MM Weatherstrip Retaining Clip Nissan'},
+    {part_number:'CRX25699', description:'Mazda Weatherstrip Retaining Clip 2007+'},
+    {part_number:'CRX8662', description:'13MM Hood Seal Retaining Clip Toyota/GM'},
+    {part_number:'CRX9794', description:'5X15MM Weatherstrip Retainer Honda'},
+    {part_number:'CRX30176', description:'Ford Weatherstrip Retainer - Ford Explorer 2014+'},
+    {part_number:'CRX6540', description:'10MM Door Weatherstrip Retainer GM/Chry'},
+    {part_number:'CRX485', description:'13MM Retaining Clip Nissan/Toyota'},
+    {part_number:'CRX19742', description:'Ford Weatherstrip Clip Dusk Nylon'},
+    {part_number:'CRX15290', description:'11MM Hood Seal Retaining Clip Honda'},
+    {part_number:'CRX21156', description:'Ford Weatherstrip Retainer Yellow Nylon'},
+    {part_number:'CRX30017', description:'Hyundai Retainer Black Nylon - Hyundai Accent 2011+'},
+    {part_number:'CRX15524', description:'15MM Weatherstrip Retainer White Nylon - Windstar 1995+'},
+    {part_number:'CRX30433', description:'GM Door Trim Applique Clip'}
+  ],
+  'Bin 8': [
+    {part_number:'CRX29460', description:'30MM Retainer Subaru'},
+    {part_number:'CRX30025', description:'Subaru Retainer 23MM - Subaru BRZ Forester'},
+    {part_number:'CRX20934', description:'30MM Hood Insulation Retainer Subaru'},
+    {part_number:'CRX4396', description:'38MM Hood Insulation Retainer Nissan'},
+    {part_number:'CRX15952', description:'30MM Hood Insulation Retainer Chrysler'},
+    {part_number:'CRX18682', description:'Hyundai Hood Insulation Retainer 26MM'},
+    {part_number:'CRX29476', description:'30MM Hood Insulation Retainer Honda'},
+    {part_number:'CRX18798', description:'30MM Hood Insulation Retainer Honda'},
+    {part_number:'CRX26675', description:'GM Hood Insulation Retainer 32MM'},
+    {part_number:'CRX29111', description:'30MM Hood Insulation Retainer GM - Chevy Cruze 2011+'},
+    {part_number:'CRX9136', description:'30MM Hood Insulation Retainer GM'},
+    {part_number:'CRX12798', description:'25MM Hood Insulation Retainer Toyota'},
+    {part_number:'CRX3116', description:'30MM Retaining Clip Toyota'},
+    {part_number:'CRX9066', description:'30MM Hood Insulation Retainer Toyota'},
+    {part_number:'CRX20708', description:'Toyota Hood Insulation Retainer 24MM'}
+  ],
+  'Bin 9': [
+    {part_number:'CRX19462', description:'17MM Rocker Moulding Clip Toyota'},
+    {part_number:'CRX19460', description:'17MM Wheel Flare Moulding Clip Toyota'},
+    {part_number:'CRX17978', description:'17MM Fender Moulding Clip Toyota Blue Nylon'},
+    {part_number:'CRX17980', description:'17MM Fender Moulding Clip Toyota Red Nylon'},
+    {part_number:'CRX3080', description:'15MM Moulding Clip W/Sealer Toyota/GM'},
+    {part_number:'CRX30214', description:'Toyota Rocker Moulding Retainer With Sealer'},
+    {part_number:'CRX15870', description:'5/8X3/4 Rocker Panel Moulding Clip GM'},
+    {part_number:'CRX18792', description:'12X24MM Rocker Moulding Clip GM'},
+    {part_number:'CRX20534', description:'15X15MM Fender Moulding Clip GM Green Nylon'},
+    {part_number:'CRX17792', description:'13/16 Rocker Panel Moulding Clip White Nylon'},
+    {part_number:'CRX29453', description:'16MM Bumper Moulding Clip GM'},
+    {part_number:'CRX20724', description:'20MM Rocker Moulding Clip GM'},
+    {part_number:'CRX22323', description:'Ford Moulding Clip White Nylon'},
+    {part_number:'CRX25891', description:'Hyundai and Kia Moulding Clip With Sealer'},
+    {part_number:'CRX30252', description:'Kia Moulding Clip With Sealer Red Nylon'},
+    {part_number:'CRX30340', description:'Kia Fender and Flare Moulding Clip White Nylon'},
+    {part_number:'CRX29887', description:'15X15MM Rocker Moulding Clip Hyundai'},
+    {part_number:'CRX21422', description:'12X20MM Rocker Moulding Clip GM Gray Nylon'},
+    {part_number:'CRX20522', description:'10X12MM Moulding Clip Hyundai'},
+    {part_number:'CRX29889', description:'16X18MM Moulding Clip Hyundai'},
+    {part_number:'CRX21436', description:'Nissan Moulding Clip W/Sealer 10/PKG'},
+    {part_number:'CRX20808', description:'Infiniti Nissan Rocker Panel Moulding Clip'},
+    {part_number:'CRX30097', description:'17MM Nissan Moulding Clip With Sealer'},
+    {part_number:'CRX30114', description:'Rocker Pillare Push Type Retainer - Subaru Legacy & Outback'}
+  ],
+  'Bin 10': [
+    {part_number:'CRX16872', description:'Toyota Scuff Plate Retainer - Celica 1993+'},
+    {part_number:'CRX30055', description:'Toyota Moulding Clip With Sealer'},
+    {part_number:'CRX18324', description:'18MM Trim Panel Retainer Toyota'},
+    {part_number:'CRX30093', description:'GM Door Panel Retainer'},
+    {part_number:'CRX30159', description:'GM Door Panel Retainer Yellow Nylon'},
+    {part_number:'CRX3084', description:'18MM Door Panel Retainer'},
+    {part_number:'CRX12426', description:'20MM Door Trim Panel Retainer Chrysler'},
+    {part_number:'CRX8942', description:'23/32 Trim Panel Retainer Chrysler'},
+    {part_number:'CRX16698', description:'18MM Trim Panel Retainer Toyota'},
+    {part_number:'CRX30092', description:'GM Retainer With Sealer Yellow Nylon'},
+    {part_number:'CRX26668', description:'GM Moulding Clip With Metal Reinforcement Red Nylon'},
+    {part_number:'CRX26666', description:'GM Moulding Clip With Metal Reinforcement Blue Nylon'},
+    {part_number:'CRX28456', description:'18MM Tail Light Retainer Chrysler'},
+    {part_number:'CRX30235', description:'Ford Moulding Retainer With Sealer White Nylon'},
+    {part_number:'CRX470', description:'25/32 Door Trim Panel Retainer Ford'},
+    {part_number:'CRX29474', description:'15MM Trim Panel Retainer Honda'},
+    {part_number:'CRX20530', description:'18MM Pillar Push-Type Retainer Honda'},
+    {part_number:'CRX30198', description:'Honda Interior Trim Push Type Retainer'},
+    {part_number:'CRX18684', description:'16MM Door Trim Panel Retainer Chry'}
+  ],
+  'Bin 11': [
+    {part_number:'CRX16872', description:'Toyota Scuff Plate Retainer - Celica 1993+'},
+    {part_number:'CRX30055', description:'Toyota Moulding Clip With Sealer'},
+    {part_number:'CRX18324', description:'18MM Trim Panel Retainer Toyota'},
+    {part_number:'CRX30093', description:'GM Door Panel Retainer'},
+    {part_number:'CRX30159', description:'GM Door Panel Retainer Yellow Nylon'},
+    {part_number:'CRX3084', description:'18MM Door Panel Retainer'},
+    {part_number:'CRX12426', description:'20MM Door Trim Panel Retainer Chrysler'},
+    {part_number:'CRX8942', description:'23/32 Trim Panel Retainer Chrysler'},
+    {part_number:'CRX16698', description:'18MM Trim Panel Retainer Toyota'},
+    {part_number:'CRX30092', description:'GM Retainer With Sealer Yellow Nylon'},
+    {part_number:'CRX26668', description:'GM Moulding Clip With Metal Reinforcement Red Nylon'},
+    {part_number:'CRX26666', description:'GM Moulding Clip With Metal Reinforcement Blue Nylon'},
+    {part_number:'CRX28456', description:'18MM Tail Light Retainer Chrysler'},
+    {part_number:'CRX30235', description:'Ford Moulding Retainer With Sealer White Nylon'},
+    {part_number:'CRX470', description:'25/32 Door Trim Panel Retainer Ford'},
+    {part_number:'CRX29474', description:'15MM Trim Panel Retainer Honda'},
+    {part_number:'CRX20530', description:'18MM Pillar Push-Type Retainer Honda'},
+    {part_number:'CRX30198', description:'Honda Interior Trim Push Type Retainer'},
+    {part_number:'CRX18684', description:'16MM Door Trim Panel Retainer Chry'},
+    {part_number:'CRX30433', description:'GM Door Trim Applique Clip'}
+  ]
+};
 
 function loadBins() {
   var el = document.getElementById('bins-list');
-  el.innerHTML = '<div class="loading"><span class="spinner"></span>Loading...</div>';
-  sb.from('bins').select('*').eq('location_id', currentLocationId).order('bin_name').then(function(result) {
-    currentBins = result.data || [];
-    renderBins(currentBins);
-  });
+  var locName = document.getElementById('orders-title').textContent.trim();
+  var binData = null;
+  if (locName.replace(/\s+/g,'').toLowerCase() === 'wv-west' || locName.toLowerCase().indexOf('west') >= 0) {
+    binData = WV_WEST_BINS;
+  }
+  if (!binData) {
+    el.innerHTML = '<div class="empty">No bin data available for this location yet.</div>';
+    return;
+  }
+  allBins = binData;
+  renderBins(binData);
 }
 
-function renderBins(bins) {
+function filterBins() {
+  var search = document.getElementById('bins-search').value.trim().toLowerCase();
+  renderBins(allBins, search);
+}
+
+function renderBins(binData, search) {
   var el = document.getElementById('bins-list');
-  if (!bins.length) { el.innerHTML = '<div class="empty">No bins added yet.<br>Tap &quot;+ Add Bin&quot; to get started.</div>'; return; }
-  el.innerHTML = bins.map(function(b) {
-    var parts = (b.parts || '').split('\n').map(function(p){ return p.trim(); }).filter(Boolean);
-    var bStr = JSON.stringify(b).replace(/'/g, "\x27");
-    return '<div class="card" style="margin-bottom:10px">' +
-      '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">' +
-      '<span style="font-weight:600;font-size:15px">' + b.bin_name + '</span>' +
-      '<button class="del-btn" onclick="openEditBin(' + bStr + ')" style="font-size:14px">&#9998;</button></div>' +
-      (b.notes ? '<div style="font-size:12px;color:var(--text2);margin-bottom:6px">' + b.notes + '</div>' : '') +
-      '<div style="font-size:12px;color:var(--text2)">' + parts.length + ' part' + (parts.length !== 1 ? 's' : '') + '</div>' +
-      '<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px">' +
-      parts.slice(0,10).map(function(p){ return '<span style="font-size:11px;padding:2px 8px;border-radius:99px;background:var(--blue-bg);color:var(--blue-text)">' + p + '</span>'; }).join('') +
-      (parts.length > 10 ? '<span style="font-size:11px;padding:2px 8px;border-radius:99px;background:var(--bg2);color:var(--text2)">+' + (parts.length-10) + ' more</span>' : '') +
-      '</div></div>';
+  if (!binData || !Object.keys(binData).length) {
+    el.innerHTML = '<div class="empty">No bin data available for this location yet.</div>';
+    return;
+  }
+  var binKeys = Object.keys(binData).sort(function(a,b) {
+    var numA = parseInt(a.replace('Bin','').trim()) || 0;
+    var numB = parseInt(b.replace('Bin','').trim()) || 0;
+    return numA - numB;
+  });
+  el.innerHTML = binKeys.map(function(binName) {
+    var items = binData[binName];
+    if (search) {
+      items = items.filter(function(p) {
+        return p.part_number.toLowerCase().indexOf(search) >= 0 ||
+               p.description.toLowerCase().indexOf(search) >= 0;
+      });
+    }
+    if (!items.length) return '';
+    return '<div style="background:var(--bg2);border-radius:var(--radius);padding:10px 14px;margin-bottom:10px;">' +
+      '<div style="font-size:13px;font-weight:600;color:var(--purple-text);margin-bottom:8px;display:flex;align-items:center;gap:8px;">' +
+      '<span style="background:var(--purple-bg);padding:3px 12px;border-radius:99px;">' + binName + '</span>' +
+      '<span style="color:var(--text2);font-weight:400;font-size:12px;">' + items.length + ' parts</span></div>' +
+      items.map(function(p) {
+        return '<div style="padding:6px 0;border-bottom:0.5px solid var(--border);font-size:13px;">' +
+          '<span style="font-weight:600;">' + p.part_number + '</span>' +
+          '<span style="color:var(--text2);font-size:12px;"> — ' + p.description + '</span>' +
+          '</div>';
+      }).join('') +
+      '</div>';
   }).join('');
 }
-
-function searchBins() {
-  var q = document.getElementById('bins-search').value.trim().toLowerCase();
-  var el = document.getElementById('bins-search-result');
-  if (!q) { el.innerHTML = ''; renderBins(currentBins); return; }
-  var matches = [];
-  currentBins.forEach(function(b) {
-    var parts = (b.parts || '').split('\n').map(function(p){ return p.trim().toLowerCase(); }).filter(Boolean);
-    var found = parts.filter(function(p){ return p.indexOf(q) >= 0; });
-    if (found.length) matches.push({ bin: b, matched: found });
-  });
-  if (!matches.length) {
-    el.innerHTML = '<div style="background:var(--amber-bg);color:var(--amber-text);border-radius:var(--radius);padding:10px 14px;font-size:13px;margin-bottom:8px">No bins found containing &quot;' + q + '&quot;</div>';
-  } else {
-    el.innerHTML = '<div style="background:var(--green-bg);color:var(--green-text);border-radius:var(--radius);padding:10px 14px;font-size:13px;margin-bottom:8px">' +
-      matches.map(function(m){ return '<strong>' + m.bin.bin_name + '</strong>' + (m.bin.notes ? ' — ' + m.bin.notes : ''); }).join('<br>') + '</div>';
-  }
-  renderBins(matches.length ? matches.map(function(m){ return m.bin; }) : currentBins);
-}
-
-function openAddBin() {
-  editingBinId = null;
-  document.getElementById('add-bin-title').textContent = 'Add Bin / Drawer';
-  document.getElementById('bin-name').value = '';
-  document.getElementById('bin-parts').value = '';
-  document.getElementById('bin-notes').value = '';
-  document.getElementById('delete-bin-btn').style.display = 'none';
-  showScreen('s-add-bin');
-}
-
-function openEditBin(b) {
-  editingBinId = b.id;
-  document.getElementById('add-bin-title').textContent = 'Edit Bin / Drawer';
-  document.getElementById('bin-name').value = b.bin_name || '';
-  document.getElementById('bin-parts').value = b.parts || '';
-  document.getElementById('bin-notes').value = b.notes || '';
-  document.getElementById('delete-bin-btn').style.display = '';
-  showScreen('s-add-bin');
-}
-
-function saveBin() {
-  var name = document.getElementById('bin-name').value.trim();
-  if (!name) { document.getElementById('bin-name').focus(); return; }
-  var data = { location_id: currentLocationId, account_id: currentAccountId, bin_name: name, parts: document.getElementById('bin-parts').value.trim(), notes: document.getElementById('bin-notes').value.trim() };
-  var op = editingBinId ? sb.from('bins').update(data).eq('id', editingBinId) : sb.from('bins').insert(data);
-  op.then(function(result) {
-    if (result.error) { showToast('Error saving bin'); return; }
-    showToast(editingBinId ? 'Bin updated!' : 'Bin saved!');
-    showScreen('s-orders'); showOrderTab('bins');
-  });
-}
-
-function deleteBin() {
-  if (!editingBinId) return;
-  sb.from('bins').delete().eq('id', editingBinId).then(function(result) {
-    if (result.error) { showToast('Error deleting'); return; }
-    showToast('Bin deleted'); editingBinId = null; showScreen('s-orders'); showOrderTab('bins');
-  });
-}
-// ── End Bins ────────────────────────────────────────────────────
-
 
 var savedParts = [];
 var editingPartId = null;
 
 loadAccounts();
+}); // end DOMContentLoaded
 </script>
+
+</head>
+<body>
+<div class="app">
+
+<div id="s-home" class="screen active">
+  <div class="header"><h1>My accounts</h1></div>
+  <div class="seg">
+    <button class="seg-btn active" onclick="setFilter('all')">All</button>
+    <button class="seg-btn" onclick="setFilter('dealership')">Dealerships</button>
+    <button class="seg-btn" onclick="setFilter('collision')">Collision</button>
+  </div>
+  <div id="account-list"><div class="loading"><span class="spinner"></span>Loading...</div></div>
+  <div class="btn-grid">
+    <button class="btn" onclick="gotoAddAccount('dealership')">+ Dealership</button>
+    <button class="btn btn-primary" onclick="gotoAddAccount('collision')">+ Collision center</button>
+  </div>
+  <button class="btn" style="margin-top:10px;background:var(--purple-bg);color:var(--purple-text);border-color:var(--purple-text);" onclick="gotoParts()">&#128269; Parts Lookup &amp; Database</button>
+</div>
+
+<div id="s-add-account" class="screen">
+  <div class="header">
+    <button class="back-btn" onclick="goHome()">&#8592; Back</button>
+    <h1 id="add-acct-title">Add account</h1>
+  </div>
+  <div id="collision-note" class="info-box" style="display:none">You can add individual locations after saving.</div>
+  <div class="form-group"><label>Name</label><input type="text" id="a-name" placeholder="e.g. Valley Ford"/></div>
+  <div class="form-group"><label>Contact name (optional)</label><input type="text" id="a-contact"/></div>
+  <div class="form-group"><label>Phone (optional)</label><input type="text" id="a-phone"/></div>
+  <div class="form-group"><label>Notes (optional)</label><input type="text" id="a-notes"/></div>
+  <button class="btn btn-primary" onclick="saveAccount()">Save</button>
+</div>
+
+<div id="s-collision" class="screen">
+  <div class="header">
+    <button class="back-btn" onclick="goHome()">&#8592; All accounts</button>
+    <h1 id="collision-title"></h1>
+  </div>
+  <div class="section-hdr" id="loc-section-hdr">Locations</div>
+  <div id="loc-list"><div class="loading"><span class="spinner"></span>Loading...</div></div>
+  <button class="btn btn-primary" id="add-loc-btn" onclick="gotoAddLocation()">+ Add location</button>
+</div>
+
+<div id="s-add-location" class="screen">
+  <div class="header">
+    <button class="back-btn" onclick="gotoCollision()">&#8592; Back</button>
+    <h1>Add location</h1>
+  </div>
+  <div class="form-group"><label>Location name</label><input type="text" id="l-name" placeholder="e.g. South Shop, Parts Counter"/></div>
+  <div class="form-group"><label>Address (optional)</label><input type="text" id="l-address"/></div>
+  <div class="form-group"><label>Contact name (optional)</label><input type="text" id="l-contact"/></div>
+  <div class="form-group"><label>Phone (optional)</label><input type="text" id="l-phone"/></div>
+  <button class="btn btn-primary" onclick="saveLocation()">Save location</button>
+</div>
+
+<div id="s-orders" class="screen">
+  <div class="header">
+    <button class="back-btn" id="orders-back-btn" onclick="ordersBack()">&#8592; Back</button>
+    <div style="flex:1">
+      <div class="breadcrumb" id="orders-breadcrumb"></div>
+      <h1 id="orders-title" style="font-size:18px"></h1>
+    </div>
+  </div>
+  <div class="tabs">
+    <button class="tab active" onclick="showOrderTab('import')">Import</button>
+    <button class="tab" onclick="showOrderTab('add')">+ Add</button>
+    <button class="tab" onclick="showOrderTab('history')">History</button>
+    <button class="tab" onclick="showOrderTab('reorder')">Reorder</button>
+    <button class="tab" onclick="showOrderTab('bins')">Bins</button>
+    <button class="tab" onclick="showOrderTab('summary')">Summary</button>
+  </div>
+  <div id="otab-import">
+    <div class="info-box">Paste your order from the company app and click Parse to extract all items automatically.</div>
+    <div id="import-paste-view">
+      <div class="form-group"><label>Order date</label><input type="date" id="import-date"/></div>
+      <div class="form-group"><label>Paste order text</label><textarea id="import-text" placeholder="Paste your order here..."></textarea></div>
+      <button class="btn btn-primary" onclick="parseImport()">Parse order</button>
+    </div>
+    <div id="import-loading" style="display:none"><div class="loading"><span class="spinner"></span>Reading your order...</div></div>
+    <div id="import-preview" style="display:none">
+      <div class="section-hdr">Review items — uncheck to skip</div>
+      <div id="preview-list"></div>
+      <div class="btn-grid" style="margin-top:12px">
+        <button class="btn" onclick="resetImport()">&#8592; Back</button>
+        <button class="btn btn-success" onclick="confirmImport()">Import all</button>
+      </div>
+    </div>
+  </div>
+  <div id="otab-add" style="display:none">
+    <div class="form-group"><label>Item name</label><input type="text" id="item-name" placeholder="e.g. Oil filter"/></div>
+    <div class="form-group"><label>Category</label>
+      <select id="item-cat"><option>Parts</option><option>Fluids</option><option>Tools</option><option>Cleaning</option><option>Safety</option><option>Other</option></select>
+    </div>
+    <div class="row2">
+      <div class="form-group"><label>Quantity</label><input type="number" id="item-qty" placeholder="1" min="1" step="1"/></div>
+      <div class="form-group"><label>Price ($)</label><input type="number" id="item-price" placeholder="0.00" min="0" step="0.01"/></div>
+    </div>
+    <div class="form-group"><label>Date</label><input type="date" id="item-date"/></div>
+    <div class="form-group"><label>Notes (optional)</label><input type="text" id="item-notes"/></div>
+    <button class="btn btn-primary" onclick="addOrder()">Save order</button>
+  </div>
+  <div id="otab-history" style="display:none">
+    <div class="seg" style="margin-bottom:10px">
+      <button class="seg-btn active" id="view-btn-date" onclick="setHistoryView('date')">By date</button>
+      <button class="seg-btn" id="view-btn-item" onclick="setHistoryView('item')">By item</button>
+    </div>
+    <div class="form-group" style="display:flex;gap:8px">
+      <input type="text" id="history-search" placeholder="Search item or part number..." oninput="renderHistory()" style="flex:1"/>
+      <select id="filter-cat" onchange="renderHistory()" style="width:auto;flex:1">
+        <option value="">All categories</option>
+        <option>Parts</option><option>Fluids</option><option>Tools</option><option>Cleaning</option><option>Safety</option><option>Other</option>
+      </select>
+    </div>
+    <div id="history-list"></div>
+  </div>
+  <div id="otab-reorder" style="display:none">
+    <div class="info-box">AI suggestions based on this account's order history.</div>
+    <div id="reorder-loading" style="display:none"><div class="loading"><span class="spinner"></span>Analyzing orders...</div></div>
+    <div id="reorder-list"></div>
+    <button class="btn" style="margin-top:4px" onclick="loadReorder()">Refresh suggestions</button>
+  </div>
+  <div id="otab-bins" style="display:none">
+    <div class="info-box">Parts organized by bin for this location. Search by part number or description.</div>
+    <div class="form-group">
+      <input type="text" id="bins-search" placeholder="Search part number or description..." oninput="filterBins()"/>
+    </div>
+    <div id="bins-list"><div class="loading"><span class="spinner"></span>Loading bins...</div></div>
+  </div>
+
+  <div id="otab-summary" style="display:none">
+    <div class="stats" id="stats-grid"></div>
+    <div id="top-items"></div>
+  </div>
+</div>
+
+</div>
+<div id="s-parts" class="screen">
+  <div class="header">
+    <button class="back-btn" onclick="goHome()">&#8592; All accounts</button>
+    <h1>Parts lookup</h1>
+  </div>
+  <div class="seg">
+    <button class="seg-btn active" id="parts-btn-search" onclick="setPartsView('search')">Search</button>
+    <button class="seg-btn" id="parts-btn-saved" onclick="setPartsView('saved')">My database</button>
+  </div>
+  <div id="parts-search-view">
+    <div class="info-box">Search Crest Industries by part number, description, or OEM number. Save parts to build your personal database.</div>
+    <div class="form-group" style="display:flex;gap:8px">
+      <input type="text" id="parts-search-input" placeholder="e.g. CRX5114, push retainer, 15289020..." style="flex:1" onkeydown="if(event.key==='Enter') searchParts()"/>
+      <button class="btn btn-primary" style="margin-top:0;width:auto;padding:10px 16px;" onclick="searchParts()">Search</button>
+    </div>
+    <div id="parts-search-results"></div>
+  </div>
+  <div id="parts-saved-view" style="display:none">
+    <div class="form-group">
+      <input type="text" id="parts-db-search" placeholder="Search your saved parts..." oninput="filterSavedParts()"/>
+    </div>
+    <div id="parts-saved-list"><div class="loading"><span class="spinner"></span>Loading...</div></div>
+    <button class="btn btn-primary" style="margin-top:8px" onclick="openAddPart(null,'')">+ Add part manually</button>
+  </div>
+</div>
+
+<div id="s-add-part" class="screen">
+  <div class="header">
+    <button class="back-btn" onclick="showScreen('s-parts');setPartsView('saved')">&#8592; Back</button>
+    <h1 id="add-part-title">Save part</h1>
+  </div>
+  <div class="form-group"><label>Part number</label><input type="text" id="p-number" placeholder="e.g. CRX5114"/></div>
+  <div class="form-group"><label>Description</label><input type="text" id="p-desc" placeholder="e.g. 20MM Push-Type Retainer GM/Ford/Chry"/></div>
+  <div class="form-group"><label>Category</label>
+    <select id="p-cat">
+      <option>Push-Type Retainers</option><option>Grille Clips</option><option>Plastic Nuts</option>
+      <option>Plastic Grommets</option><option>Rivets</option><option>Fasteners</option>
+      <option>Tools</option><option>Chemicals</option><option>Safety</option><option>Other</option>
+    </select>
+  </div>
+  <div class="form-group"><label>OEM / Cross-reference numbers (optional)</label><input type="text" id="p-oem" placeholder="e.g. GM 21030249, Ford N807389S"/></div>
+  <div class="form-group"><label>Notes (optional)</label><input type="text" id="p-notes" placeholder="e.g. Used at Valley Ford North Shop"/></div>
+  <div class="form-group"><label>Source</label><input type="text" id="p-source" value="Crest Industries"/></div>
+  <button class="btn btn-primary" onclick="savePart()">Save to database</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+
 </body>
 </html>
-  
