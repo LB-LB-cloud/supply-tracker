@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Supply Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#fff;--bg2:#f5f5f3;--bg3:#ebebea;--text:#1a1a18;--text2:#6b6b67;--text3:#9b9b96;--border:rgba(0,0,0,.12);--border2:rgba(0,0,0,.2);--blue:#185FA5;--blue-bg:#E6F1FB;--blue-text:#0C447C;--green:#3B6D11;--green-bg:#EAF3DE;--green-text:#27500A;--purple-bg:#EEEDFE;--purple-text:#3C3489;--red:#A32D2D;--red-bg:#FCEBEB;--red-text:#791F1F;--amber-bg:#FAEEDA;--amber-text:#633806;--r:8px;--rl:12px}
+@media(prefers-color-scheme:dark){:root{--bg:#1c1c1a;--bg2:#262624;--bg3:#2f2f2c;--text:#e8e6de;--text2:#9b9b96;--text3:#6b6b67;--border:rgba(255,255,255,.1);--border2:rgba(255,255,255,.2);--blue-bg:#0c2d52;--blue-text:#85B7EB;--green-bg:#1a2f09;--green-text:#97C459;--purple-bg:#1e1c42;--purple-text:#AFA9EC;--red-bg:#2d1010;--red-text:#F09595;--amber-bg:#2d2208;--amber-text:#EF9F27}}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.app{max-width:480px;margin:0 auto;padding:0 16px 80px}
+.hdr{padding:20px 0 12px;display:flex;align-items:center;gap:10px}
+.hdr h1{font-size:20px;font-weight:600;flex:1}
+.back{background:none;border:none;cursor:pointer;color:var(--text2);font-size:15px;padding:4px 0}
+.seg{display:flex;border:.5px solid var(--border2);border-radius:var(--r);overflow:hidden;margin-bottom:16px}
+.seg-btn{flex:1;padding:9px;font-size:13px;border:none;background:transparent;cursor:pointer;color:var(--text2)}
+.seg-btn.active{background:var(--bg2);color:var(--text);font-weight:600}
+.seg-btn:not(:last-child){border-right:.5px solid var(--border)}
+.tabs{display:flex;gap:5px;margin-bottom:16px}
+.tab{flex:1;padding:7px 2px;font-size:11px;border:.5px solid var(--border2);border-radius:var(--r);background:transparent;cursor:pointer;color:var(--text2);text-align:center}
+.tab.active{background:var(--bg2);color:var(--text);font-weight:600}
+.card{background:var(--bg);border:.5px solid var(--border);border-radius:var(--rl);padding:14px 16px;margin-bottom:10px}
+.card-row{display:flex;align-items:center;gap:12px;cursor:pointer}
+.av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;flex-shrink:0}
+.av-sq{border-radius:10px}
+.ci{flex:1;min-width:0}
+.cn{font-weight:600;font-size:15px}
+.cm{font-size:12px;color:var(--text2);margin-top:2px}
+.chev{color:var(--text3);font-size:20px}
+.pill{font-size:10px;padding:2px 8px;border-radius:99px;display:inline-block}
+.pill-dealership{background:var(--blue-bg);color:var(--blue-text)}
+.pill-collision{background:var(--purple-bg);color:var(--purple-text)}
+.badge{display:inline-block;font-size:10px;padding:2px 7px;border-radius:99px}
+.badge-Parts{background:var(--blue-bg);color:var(--blue-text)}
+.badge-Fluids{background:var(--green-bg);color:var(--green-text)}
+.badge-Tools{background:var(--amber-bg);color:var(--amber-text)}
+.badge-Cleaning{background:#E1F5EE;color:#085041}
+.badge-Safety{background:#FAECE7;color:#712B13}
+.badge-Other{background:var(--bg2);color:var(--text2)}
+.fg{margin-bottom:14px}
+.fg label{font-size:13px;color:var(--text2);display:block;margin-bottom:5px}
+.fg input,.fg select,.fg textarea{width:100%;padding:10px 12px;border:.5px solid var(--border2);border-radius:var(--r);background:var(--bg);color:var(--text);font-size:14px;font-family:inherit;-webkit-appearance:none;appearance:none}
+.fg textarea{min-height:100px;resize:vertical;font-family:monospace;font-size:12px}
+.r2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.btn{width:100%;padding:12px;font-size:14px;font-weight:600;cursor:pointer;border-radius:var(--r);border:.5px solid var(--border2);background:var(--bg2);color:var(--text);font-family:inherit;margin-top:6px}
+.btn:hover{background:var(--bg3)}
+.btn-p{background:var(--blue);color:#E6F1FB;border-color:var(--blue)}
+.btn-p:hover{background:var(--blue-text)}
+.btn-s{background:var(--green);color:var(--green-bg);border-color:var(--green)}
+.btn-g{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
+.btn-g .btn{margin-top:0}
+.oc{background:var(--bg);border:.5px solid var(--border);border-radius:var(--rl);padding:12px 14px;margin-bottom:8px}
+.oh{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px}
+.on{font-weight:600;font-size:14px}
+.op{font-weight:600;font-size:14px;color:var(--blue)}
+.om{font-size:12px;color:var(--text2);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.del{background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px;padding:0 2px;line-height:1}
+.del:hover{color:var(--red)}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.stat{background:var(--bg2);border-radius:var(--r);padding:14px}
+.stat-l{font-size:11px;color:var(--text2);margin-bottom:4px}
+.stat-v{font-size:22px;font-weight:700}
+.wl{font-size:12px;color:var(--text2);margin:12px 0 6px;font-weight:600}
+.div{border:none;border-top:.5px solid var(--border);margin:10px 0}
+.ib{background:var(--bg2);border-radius:var(--r);padding:10px 14px;font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.5}
+.rc{background:var(--bg);border:.5px solid var(--border);border-radius:var(--rl);padding:12px 14px;margin-bottom:8px}
+.empty{text-align:center;color:var(--text2);font-size:14px;padding:40px 0;line-height:1.6}
+.loading{text-align:center;color:var(--text2);font-size:14px;padding:30px 0}
+.spin{display:inline-block;width:18px;height:18px;border:2px solid var(--border2);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.pi{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:.5px solid var(--border);font-size:13px}
+.pi:last-child{border-bottom:none}
+.pn{flex:1;font-weight:500}
+.sh{font-size:13px;font-weight:600;color:var(--text2);margin:14px 0 8px}
+.bc{font-size:12px;color:var(--text2);margin-bottom:2px}
+.screen{display:none}
+.screen.active{display:block}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 20px;border-radius:99px;font-size:13px;font-weight:500;z-index:999;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div class="app">
+
+<div id="s-home" class="screen active">
+  <div class="hdr"><h1>My accounts</h1></div>
+  <div class="seg">
+    <button class="seg-btn active" onclick="setFilter('all')">All</button>
+    <button class="seg-btn" onclick="setFilter('dealership')">Dealerships</button>
+    <button class="seg-btn" onclick="setFilter('collision')">Collision</button>
+  </div>
+  <div id="account-list"><div class="loading"><span class="spin"></span>Loading...</div></div>
+  <div class="btn-g">
+    <button class="btn" onclick="gotoAddAccount('dealership')">+ Dealership</button>
+    <button class="btn btn-p" onclick="gotoAddAccount('collision')">+ Collision center</button>
+  </div>
+  <button class="btn" style="margin-top:10px;background:var(--purple-bg);color:var(--purple-text);border-color:var(--purple-text)" onclick="gotoParts()">&#128269; Parts Lookup &amp; Database</button>
+</div>
+
+<div id="s-add-account" class="screen">
+  <div class="hdr"><button class="back" onclick="goHome()">&#8592; Back</button><h1 id="add-acct-title">Add account</h1></div>
+  <div id="collision-note" class="ib" style="display:none">You can add individual locations after saving.</div>
+  <div class="fg"><label>Name</label><input type="text" id="a-name" placeholder="e.g. Valley Ford"/></div>
+  <div class="fg"><label>Contact name (optional)</label><input type="text" id="a-contact"/></div>
+  <div class="fg"><label>Phone (optional)</label><input type="text" id="a-phone"/></div>
+  <div class="fg"><label>Notes (optional)</label><input type="text" id="a-notes"/></div>
+  <button class="btn btn-p" onclick="saveAccount()">Save</button>
+</div>
+
+<div id="s-collision" class="screen">
+  <div class="hdr"><button class="back" onclick="goHome()">&#8592; All accounts</button><h1 id="collision-title"></h1></div>
+  <div class="sh" id="loc-section-hdr">Locations</div>
+  <div id="loc-list"><div class="loading"><span class="spin"></span>Loading...</div></div>
+  <button class="btn btn-p" id="add-loc-btn" onclick="gotoAddLocation()">+ Add location</button>
+</div>
+
+<div id="s-add-location" class="screen">
+  <div class="hdr"><button class="back" onclick="gotoCollision()">&#8592; Back</button><h1>Add location</h1></div>
+  <div class="fg"><label>Location name</label><input type="text" id="l-name" placeholder="e.g. South Shop, Parts Counter"/></div>
+  <div class="fg"><label>Address (optional)</label><input type="text" id="l-address"/></div>
+  <div class="fg"><label>Contact name (optional)</label><input type="text" id="l-contact"/></div>
+  <div class="fg"><label>Phone (optional)</label><input type="text" id="l-phone"/></div>
+  <button class="btn btn-p" onclick="saveLocation()">Save location</button>
+</div>
+
+<div id="s-orders" class="screen">
+  <div class="hdr">
+    <button class="back" id="orders-back-btn" onclick="ordersBack()">&#8592; Back</button>
+    <div style="flex:1"><div class="bc" id="orders-breadcrumb"></div><h1 id="orders-title" style="font-size:18px"></h1></div>
+  </div>
+  <div class="tabs">
+    <button class="tab active" onclick="showOrderTab('import')">Import</button>
+    <button class="tab" onclick="showOrderTab('add')">+ Add</button>
+    <button class="tab" onclick="showOrderTab('history')">History</button>
+    <button class="tab" onclick="showOrderTab('reorder')">Reorder</button>
+    <button class="tab" onclick="showOrderTab('bins')">Bins</button>
+    <button class="tab" onclick="showOrderTab('summary')">Summary</button>
+  </div>
+
+  <div id="otab-import">
+    <div class="ib">Paste your order from the company app — AI extracts all items automatically.</div>
+    <div id="import-paste-view">
+      <div class="fg"><label>Order date</label><input type="date" id="import-date"/></div>
+      <div class="fg"><label>Paste order text</label><textarea id="import-text" placeholder="Paste your order here..."></textarea></div>
+      <button class="btn btn-p" onclick="parseImport()">Parse order</button>
+    </div>
+    <div id="import-loading" style="display:none"><div class="loading"><span class="spin"></span>Reading your order...</div></div>
+    <div id="import-preview" style="display:none">
+      <div class="sh">Review items — uncheck to skip</div>
+      <div id="preview-list"></div>
+      <div class="btn-g" style="margin-top:12px">
+        <button class="btn" onclick="resetImport()">&#8592; Back</button>
+        <button class="btn btn-s" onclick="confirmImport()">Import all</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="otab-add" style="display:none">
+    <div class="fg"><label>Item name</label><input type="text" id="item-name" placeholder="e.g. Oil filter"/></div>
+    <div class="fg"><label>Category</label>
+      <select id="item-cat"><option>Parts</option><option>Fluids</option><option>Tools</option><option>Cleaning</option><option>Safety</option><option>Other</option></select>
+    </div>
+    <div class="r2">
+      <div class="fg"><label>Quantity</label><input type="number" id="item-qty" placeholder="1" min="1" step="1"/></div>
+      <div class="fg"><label>Price ($)</label><input type="number" id="item-price" placeholder="0.00" min="0" step="0.01"/></div>
+    </div>
+    <div class="fg"><label>Date</label><input type="date" id="item-date"/></div>
+    <div class="fg"><label>Notes (optional)</label><input type="text" id="item-notes"/></div>
+    <button class="btn btn-p" onclick="addOrder()">Save order</button>
+  </div>
+
+  <div id="otab-history" style="display:none">
+    <div class="seg" style="margin-bottom:10px">
+      <button class="seg-btn active" id="view-btn-date" onclick="setHistoryView('date')">By date</button>
+      <button class="seg-btn" id="view-btn-item" onclick="setHistoryView('item')">By item</button>
+    </div>
+    <div class="fg" style="display:flex;gap:8px">
+      <input type="text" id="history-search" placeholder="Search item or part number..." oninput="renderHistory()" style="flex:1"/>
+      <select id="filter-cat" onchange="renderHistory()" style="width:auto;flex:1">
+        <option value="">All categories</option>
+        <option>Parts</option><option>Fluids</option><option>Tools</option><option>Cleaning</option><option>Safety</option><option>Other</option>
+      </select>
+    </div>
+    <div id="history-list"></div>
+  </div>
+
+  <div id="otab-reorder" style="display:none">
+    <div class="ib">AI suggestions based on this account's order history.</div>
+    <div id="reorder-loading" style="display:none"><div class="loading"><span class="spin"></span>Analyzing orders...</div></div>
+    <div id="reorder-list"></div>
+    <button class="btn" style="margin-top:4px" onclick="loadReorder()">Refresh suggestions</button>
+  </div>
+
+  <div id="otab-bins" style="display:none">
+    <div class="ib">Parts organized by bin for this location.</div>
+    <div class="fg"><input type="text" id="bins-search" placeholder="Search part number or description..." oninput="filterBins()"/></div>
+    <div id="bins-list"></div>
+  </div>
+
+  <div id="otab-summary" style="display:none">
+    <div class="stats" id="stats-grid"></div>
+    <div id="top-items"></div>
+  </div>
+</div>
+
+<div id="s-parts" class="screen">
+  <div class="hdr"><button class="back" onclick="goHome()">&#8592; All accounts</button><h1>Parts lookup</h1></div>
+  <div class="seg">
+    <button class="seg-btn active" id="parts-btn-search" onclick="setPartsView('search')">Search</button>
+    <button class="seg-btn" id="parts-btn-saved" onclick="setPartsView('saved')">My database</button>
+  </div>
+  <div id="parts-search-view">
+    <div class="ib">Search Crest Industries by part number, description, or OEM number.</div>
+    <div class="fg" style="display:flex;gap:8px">
+      <input type="text" id="parts-search-input" placeholder="e.g. CRX5114, push retainer..." style="flex:1" onkeydown="if(event.key==='Enter') searchParts()"/>
+      <button class="btn btn-p" style="margin-top:0;width:auto;padding:10px 16px" onclick="searchParts()">Search</button>
+    </div>
+    <div id="parts-search-results"></div>
+  </div>
+  <div id="parts-saved-view" style="display:none">
+    <div class="fg"><input type="text" id="parts-db-search" placeholder="Search your saved parts..." oninput="filterSavedParts()"/></div>
+    <div id="parts-saved-list"><div class="loading"><span class="spin"></span>Loading...</div></div>
+    <button class="btn btn-p" style="margin-top:8px" onclick="openAddPart()">+ Add part manually</button>
+  </div>
+</div>
+
+<div id="s-add-part" class="screen">
+  <div class="hdr"><button class="back" onclick="showScreen('s-parts');setPartsView('saved')">&#8592; Back</button><h1 id="add-part-title">Save part</h1></div>
+  <div class="fg"><label>Part number</label><input type="text" id="p-number" placeholder="e.g. CRX5114"/></div>
+  <div class="fg"><label>Description</label><input type="text" id="p-desc"/></div>
+  <div class="fg"><label>Category</label>
+    <select id="p-cat"><option>Push-Type Retainers</option><option>Grille Clips</option><option>Plastic Nuts</option><option>Plastic Grommets</option><option>Rivets</option><option>Fasteners</option><option>Tools</option><option>Chemicals</option><option>Safety</option><option>Other</option></select>
+  </div>
+  <div class="fg"><label>OEM / Cross-reference numbers (optional)</label><input type="text" id="p-oem"/></div>
+  <div class="fg"><label>Notes (optional)</label><input type="text" id="p-notes"/></div>
+  <div class="fg"><label>Source</label><input type="text" id="p-source" value="Crest Industries"/></div>
+  <button class="btn btn-p" onclick="savePart()">Save to database</button>
+</div>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+var SB_URL = 'https://slzxwtcarpbusdfqjhzt.supabase.co';
+var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsenh3dGNhcnBidXNkZnFqaHp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5Mzc4OTIsImV4cCI6MjA5MzUxMzg5Mn0.Tp6O5k0R1UpLRqB6p7cPkjBjXdPXxmVgPdFK1aSjERM';
+var sb = supabase.createClient(SB_URL, SB_KEY);
+
+var currentFilter = 'all';
+var currentAccountId = null;
+var currentLocationId = null;
+var currentOrdersBackTarget = 'home';
+var currentAddType = 'dealership';
+var parsedItems = [];
+var accounts = [];
+var currentOrders = [];
+var currentHistoryView = 'date';
+var savedParts = [];
+var editingPartId = null;
+
+var avatarColors = [{bg:'#E6F1FB',color:'#0C447C'},{bg:'#EAF3DE',color:'#27500A'},{bg:'#FAEEDA',color:'#633806'},{bg:'#E1F5EE',color:'#085041'},{bg:'#FAECE7',color:'#712B13'},{bg:'#F1EFE8',color:'#444441'},{bg:'#B5D4F4',color:'#042C53'}];
+var collisionColors = [{bg:'#EEEDFE',color:'#3C3489'},{bg:'#CECBF6',color:'#26215C'},{bg:'#AFA9EC',color:'#26215C'}];
+
+// ─── BIN DATA (hardcoded) ───────────────────────────────────────────────────
+var BIN_DATA = {
+  'WV -West': {
+    'Bin 1': [
+      {pn:'CRX2802',desc:'7/16 Fascia Retainer Ford'},
+      {pn:'CRX30008',desc:'GM Bumper Fascia Retainer - Pontiac Grand Am'},
+      {pn:'CRX500',desc:'3/4 Trim Panel Retainer GM/Chry'},
+      {pn:'CRX462',desc:'11/16 Fender and Bumper Shield Retainer'},
+      {pn:'CRX4520',desc:'Fender and Bumper Shield Retainer - Radiator Yoke'},
+      {pn:'CRX4036',desc:'13MM Retainer Honda'},
+      {pn:'CRX465',desc:'7/8 Front End Stone Shield Retainer GM'},
+      {pn:'CRX464',desc:'1IN Fascia to Bumper Retainer Ford'},
+      {pn:'CRX463',desc:'1IN Radiator Apron Panel Retainer GM'},
+      {pn:'CRX4804',desc:'7/16 Weatherstrip Fastener GM/Ford/AMC'},
+      {pn:'CRX19660',desc:'19MM Bumper Cover Retainer Lexus/Toyota'},
+      {pn:'CRX4814',desc:'5/8 Trim Panel Retainer Ford/Chrysler'},
+      {pn:'CRX4670',desc:'1IN Trim Panel Retainer Ford'},
+      {pn:'CRX17716',desc:'22MM Fender Liner Retainer Ford'},
+      {pn:'CRX604',desc:'1/2 Heat Shield Retainer Ford'},
+      {pn:'CRX29322',desc:'15MM Trim Panel Retainer Mazda'},
+      {pn:'CRX130',desc:'11/16 Shield Retainer GM/Ford/Chry'},
+      {pn:'CRX127',desc:'1IN Door Frame Spacer Retainer Chry/Ford'},
+      {pn:'CRX15548',desc:'Ford Mud Flap Retainer'}
+    ],
+    'Bin 2': [
+      {pn:'CRX19902',desc:'20MM Front Bumper Push-Type Ret Honda'},
+      {pn:'CRX20604',desc:'20MM Bumper Push-Type Retainer Acura'},
+      {pn:'CRX20826',desc:'20MM Push-Type Retainer Honda'},
+      {pn:'CRX11644',desc:'20MM Bumper Push-Type Retainer Acura'},
+      {pn:'CRX13776',desc:'20MM Bumper Push-Type Retainer Acura'},
+      {pn:'CRX11069',desc:'20MM Bumper/Wheel Well Push-Type Acura'},
+      {pn:'CRX11904',desc:'20MM Fender/Bumper Push-Type Ret Mitsubishi'},
+      {pn:'CRX12264',desc:'20MM Fender Push-Type Retainer Honda'},
+      {pn:'CRX17148',desc:'18MM Fender & Bumper Push-Type Retainer Honda & Mitsubishi'},
+      {pn:'CRX12766',desc:'20MM Push-Type Retainer Nissan'},
+      {pn:'CRX17778',desc:'18MM Bumper Clip Push-Type Retainer Nissan'},
+      {pn:'CRX11244',desc:'18MM Bumper Push-Type Retainer Nissan'},
+      {pn:'CRX20469',desc:'Nissan and Infinity Push Type Retainer'},
+      {pn:'CRX19160',desc:'20MM Bumper and Radiator Push-Type Ret Nissan'},
+      {pn:'CRX20800',desc:'20MM Cowl/Bumper/Fender Push-Type Ret Nissan'},
+      {pn:'CRX19788',desc:'20MM Eng Cover Push-Type Ret Toyota'},
+      {pn:'CRX14024',desc:'20MM Fender Push-Type Ret Toyota'},
+      {pn:'CRX17832',desc:'18MM Bumper Push-Type Ret Toyota'},
+      {pn:'CRX19900',desc:'#8 Fender Apron Screw Grommet Honda'},
+      {pn:'CRX18692',desc:'18MM Front Fender Push-Type Ret Lexus'},
+      {pn:'CRX20594',desc:'19MM Radiator/Grille Push-Type Ret Lexus'},
+      {pn:'CRX17302',desc:'20MM Splash Shield Push-Type Ret Toyota'},
+      {pn:'CRX30748',desc:'Honda Trunk Interior and Side Push Ret'},
+      {pn:'CRX29472',desc:'20MM Fender Push-Type Ret Honda'}
+    ],
+    'Bin 3': [
+      {pn:'CRX17052',desc:'10MM Radiator Push-Type Ret Mercedes'},
+      {pn:'CRX17686',desc:'20MM Bumper/Wheel Push-Type Retainer BMW'},
+      {pn:'CRX17068',desc:'20MM Bumper Push-Type Retainer BMW'},
+      {pn:'CRX17322',desc:'20MM Push-Type Retainer Mercedes'},
+      {pn:'CRX20100',desc:'16MM Push-Type Retainer Mercedes'},
+      {pn:'CRX29650',desc:'18MM Bumper Push-Type Ret Chrysler'},
+      {pn:'CRX18372',desc:'18MM Bumper Cover Push-Type Ret Mitsubishi'},
+      {pn:'CRX12324',desc:'23/32 Fascia Push-Type Retainer Chrysler'},
+      {pn:'CRX5128',desc:'14MM Push-Type Retainer GM'},
+      {pn:'CRX30743',desc:'GM Air Dam Fender Flares Push Type Ret'},
+      {pn:'CRX492',desc:'1IN Splash Shield Fascia Push-Type Ret'},
+      {pn:'CRX26673',desc:'GM Push Type Retainer'},
+      {pn:'CRX5082',desc:'11/16 Body Push-Type Retainer GM/Ford'},
+      {pn:'CRX30309',desc:'Chrysler Push Type Retainer'},
+      {pn:'CRX14540',desc:'13MM Front Air Deflector Grommet GM'},
+      {pn:'CRX14538',desc:'18MM Front Air Deflector Retainer GM'}
+    ],
+    'Bin 4': [
+      {pn:'CRX19640',desc:'19MM Fender Apron Push-Type Ret GM'},
+      {pn:'CRX19592',desc:'18MM Fender Push-Type Ret GM/Chry'},
+      {pn:'CRX19654',desc:'18MM Bumper Fascia Push-Type Ret GM'},
+      {pn:'CRX19656',desc:'20MM Fender Push-Type Retainer GM'},
+      {pn:'CRX5114',desc:'20MM Push-Type Retainer GM/Ford/Chry'},
+      {pn:'CRX20046',desc:'18MM Air Distributor Push-Type Retainer'},
+      {pn:'CRX20044',desc:'18MM Air Dam Push-Type Retainer GM/Ford'},
+      {pn:'CRX20048',desc:'19MM Fascia Push-Type Retainer'},
+      {pn:'CRX20050',desc:'20MM Air Dam Push-Type Retainer GM'},
+      {pn:'CRX20052',desc:'20MM Floor Panel Push-Type Ret GM'},
+      {pn:'CRX20054',desc:'25MM Push-Type Retainer GM/Ford'},
+      {pn:'CRX20056',desc:'25MM Panel Attachement Push-Type Ret'},
+      {pn:'CRX30051',desc:'GM Push Type Retainer'},
+      {pn:'CRX15704',desc:'10/32 Wheel Opening Push-Type Retainer'},
+      {pn:'CRX5096',desc:'20MM Fascia Push-Type Retainer GM'},
+      {pn:'CRX5116',desc:'15MM Push-Type Retainer GM/Ford'},
+      {pn:'CRX14638',desc:'17MM Push-Type Retainer GM/Chrysler'},
+      {pn:'CRX14542',desc:'20MM Bumper Cover Push-Type Ret GM'},
+      {pn:'CRX18502',desc:'20MM Bumper/Fender Push-Type Ret GM'}
+    ],
+    'Bin 5': [
+      {pn:'CRX30261',desc:'Hyundai and Kia Bumper Cover Push Retain'},
+      {pn:'CRX20146',desc:'15MM Push-Type Retainer Toyota'},
+      {pn:'CRX20498',desc:'18MM Rocker Moulding Push-Type Ret'},
+      {pn:'CRX20606',desc:'16MM Interior Trim Push-Type Ret Honda'},
+      {pn:'CRX29307',desc:'Toyota Lexus Push Type Retainer'},
+      {pn:'CRX17512',desc:'16MM Bumper Fascia Push-Type Ret Nissan'},
+      {pn:'CRX29884',desc:'15MM Cowl/Bumper Push-Type Ret Hyundai'},
+      {pn:'CRX30249',desc:'Lexus & Toyota Push Type Retainer'},
+      {pn:'CRX30322',desc:'Hyundai Kia Splash Shield Nylon Nut'},
+      {pn:'CRX3104',desc:'18MM Push-Type Retainer Toyota/Nissan'},
+      {pn:'CRX29309',desc:'15MM Push-Type Retainer Mitsubishi'},
+      {pn:'CRX30683',desc:'Subaru Push Type Retainer Front Fender'},
+      {pn:'CRX21562',desc:'Subaru Push Type Retainer Front & Rear Bumper'},
+      {pn:'CRX21560',desc:'Subaru Push Type Retainer Front & Rear Bumper'},
+      {pn:'CRX19251',desc:'Hyundai Fender Liner Push Type Retainer'},
+      {pn:'CRX17766',desc:'16MM Luggage Comp Trim Ret Toyota'},
+      {pn:'CRX29995',desc:'20MM Bumper/Fender Push-Type Ret Subaru'},
+      {pn:'CRX4128',desc:'20MM Push-Type Retainer Honda/Nissan'},
+      {pn:'CRX21561',desc:'Subaru Push Type Retainer BRZ Crosstrek'},
+      {pn:'CRX20932',desc:'20MM Bumper/Quarter Panel Push-Type Ret Subaru'},
+      {pn:'CRX20928',desc:'20MM Bumper/Eng Push-Type Ret Subaru'}
+    ],
+    'Bin 6': [
+      {pn:'CRX3098',desc:'15MM Push-Type Retainer Toyota/Mazda'},
+      {pn:'CRX6986',desc:'20MM Fender Push-Type Retainer Honda'},
+      {pn:'CRX4282',desc:'18MM Push-Type Retainer Mazda/Ford'},
+      {pn:'CRX20524',desc:'Kia Push-Type Retainer Black Nylon'},
+      {pn:'CRX4142',desc:'20MM Bumper Push-Type Retainer'},
+      {pn:'CRX15432',desc:'Bumper Cover Push-Type Ret Toyota'},
+      {pn:'CRX20464',desc:'10MM Fascia Push-Type Retainer Toyota'},
+      {pn:'CRX14382',desc:'16MM Cowl Panel Push-Type Ret Toyota'},
+      {pn:'CRX2742',desc:'15MM Push-Type Ret Honda/Nissan'},
+      {pn:'CRX472',desc:'20MM Push-Type Retainer Honda/Nissan/Mazda'},
+      {pn:'CRX29844',desc:'18MM Engine/Fender Push-Type Ret Subaru'},
+      {pn:'CRX4138',desc:'20MM Bumper Push-Type Retainer Honda'},
+      {pn:'CRX473',desc:'20MM Inner Fender Push-Type Retainer'},
+      {pn:'CRX4420',desc:'14MM Cowl Panel Push-Type Retainer Nissan'},
+      {pn:'CRX29319',desc:'20MM Push Type Retainer Subaru'},
+      {pn:'CRX17348',desc:'20MM Hood & Trunk Push-Type Retainer BMW'},
+      {pn:'CRX25746',desc:'20MM Bumper/Grille Push-Type Ret Nissan'},
+      {pn:'CRX20466',desc:'14MM Interior Trim Push-Type Ret Toyota'},
+      {pn:'CRX29842',desc:'20MM Moulding Push-Type Retainer Subaru'},
+      {pn:'CRX5166',desc:'1/4 Push-Type Retainer GM'},
+      {pn:'CRX471',desc:'11/16 Radiat Shroud Push-Type Retainer'}
+    ],
+    'Bin 7': [
+      {pn:'CRX6544',desc:'5X15MM Weatherstrip Retainer Ford'},
+      {pn:'CRX12590',desc:'5X15MM Weatherstrip Retainer Honda'},
+      {pn:'CRX10932',desc:'12MM Trunk Moulding Retaining Clip Honda'},
+      {pn:'CRX22307',desc:'Honda Retaining Clip'},
+      {pn:'CRX4062',desc:'10MM Hood Insulating Retaining Clip'},
+      {pn:'CRX6546',desc:'1/4X21/32 Weatherstrip Retainer GM/Chry'},
+      {pn:'CRX25466',desc:'6MM Weatherstrip Retainer Nissan'},
+      {pn:'CRX21295',desc:'10MM Weatherstrip Retaining Clip Nissan'},
+      {pn:'CRX25699',desc:'Mazda Weatherstrip Retaining Clip'},
+      {pn:'CRX8662',desc:'13MM Hood Seal Retaining Clip Toyota/GM'},
+      {pn:'CRX9794',desc:'5X15MM Weatherstrip Retainer Honda'},
+      {pn:'CRX30176',desc:'Ford Weatherstrip Retainer'},
+      {pn:'CRX6540',desc:'10MM Door Weatherstrip Retainer GM/Chry'},
+      {pn:'CRX485',desc:'13MM Retaining Clip Nissan/Toyota'},
+      {pn:'CRX19742',desc:'Ford Weatherstrip Clip Dusk Nylon'},
+      {pn:'CRX15290',desc:'11MM Hood Seal Retaining Clip Honda'},
+      {pn:'CRX21156',desc:'Ford Weatherstrip Retainer Yellow Nylon'},
+      {pn:'CRX30017',desc:'Hyundai Retainer Black Nylon'},
+      {pn:'CRX15524',desc:'15MM Weatherstrip Retainer White Nylon'},
+      {pn:'CRX30433',desc:'GM Door Trim Applique Clip'}
+    ],
+    'Bin 8': [
+      {pn:'CRX29460',desc:'30MM Retainer Subaru'},
+      {pn:'CRX30025',desc:'Subaru Retainer 23MM'},
+      {pn:'CRX20934',desc:'30MM Hood Insulation Retainer Subaru'},
+      {pn:'CRX4396',desc:'38MM Hood Insulation Retainer Nissan'},
+      {pn:'CRX15952',desc:'30MM Hood Insulation Retainer Chrysler'},
+      {pn:'CRX18682',desc:'Hyundai Hood Insulation Retainer 26MM'},
+      {pn:'CRX29476',desc:'30MM Hood Insulation Retainer Honda'},
+      {pn:'CRX18798',desc:'30MM Hood Insulation Retainer Honda'},
+      {pn:'CRX26675',desc:'GM Hood Insulation Retainer 32MM'},
+      {pn:'CRX29111',desc:'30MM Hood Insulation Retainer GM'},
+      {pn:'CRX9136',desc:'30MM Hood Insulation Retainer GM'},
+      {pn:'CRX12798',desc:'25MM Hood Insulation Retainer Toyota'},
+      {pn:'CRX3116',desc:'30MM Retaining Clip Toyota'},
+      {pn:'CRX9066',desc:'30MM Hood Insulation Retainer Toyota'},
+      {pn:'CRX20708',desc:'Toyota Hood Insulation Retainer 24MM'}
+    ],
+    'Bin 9': [
+      {pn:'CRX19462',desc:'17MM Rocker Moulding Clip Toyota'},
+      {pn:'CRX19460',desc:'17MM Wheel Flare Moulding Clip Toyota'},
+      {pn:'CRX17978',desc:'17MM Fender Moulding Clip Toyota Blue Nylon'},
+      {pn:'CRX17980',desc:'17MM Fender Moulding Clip Toyota Red Nylon'},
+      {pn:'CRX3080',desc:'15MM Moulding Clip W/Sealer Toyota/GM'},
+      {pn:'CRX30214',desc:'Toyota Rocker Moulding Retainer With Sealer'},
+      {pn:'CRX15870',desc:'5/8X3/4 Rocker Panel Moulding Clip GM'},
+      {pn:'CRX18792',desc:'12X24MM Rocker Moulding Clip GM'},
+      {pn:'CRX20534',desc:'15X15MM Fender Moulding Clip GM Green Nylon'},
+      {pn:'CRX17792',desc:'13/16 Rocker Panel Moulding Clip White Nylon'},
+      {pn:'CRX29453',desc:'16MM Bumper Moulding Clip GM'},
+      {pn:'CRX20724',desc:'20MM Rocker Moulding Clip GM'},
+      {pn:'CRX22323',desc:'Ford Moulding Clip White Nylon'},
+      {pn:'CRX25891',desc:'Hyundai and Kia Moulding Clip With Sealer'},
+      {pn:'CRX30252',desc:'Kia Moulding Clip With Sealer Red Nylon'},
+      {pn:'CRX30340',desc:'Kia Fender and Flare Moulding Clip White Nylon'},
+      {pn:'CRX29887',desc:'15X15MM Rocker Moulding Clip Hyundai'},
+      {pn:'CRX21422',desc:'12X20MM Rocker Moulding Clip GM Gray Nylon'},
+      {pn:'CRX20522',desc:'10X12MM Moulding Clip Hyundai'},
+      {pn:'CRX29889',desc:'16X18MM Moulding Clip Hyundai'},
+      {pn:'CRX21436',desc:'Nissan Moulding Clip W/Sealer'},
+      {pn:'CRX20808',desc:'Infiniti Nissan Rocker Panel Moulding Clip'},
+      {pn:'CRX30097',desc:'17MM Nissan Moulding Clip With Sealer'},
+      {pn:'CRX30114',desc:'Rocker Pillare Push Type Retainer Subaru'}
+    ],
+    'Bin 10': [
+      {pn:'CRX16872',desc:'Toyota Scuff Plate Retainer'},
+      {pn:'CRX30055',desc:'Toyota Moulding Clip With Sealer'},
+      {pn:'CRX18324',desc:'18MM Trim Panel Retainer Toyota'},
+      {pn:'CRX30093',desc:'GM Door Panel Retainer'},
+      {pn:'CRX30159',desc:'GM Door Panel Retainer Yellow Nylon'},
+      {pn:'CRX3084',desc:'18MM Door Panel Retainer'},
+      {pn:'CRX12426',desc:'20MM Door Trim Panel Retainer Chrysler'},
+      {pn:'CRX8942',desc:'23/32 Trim Panel Retainer Chrysler'},
+      {pn:'CRX16698',desc:'18MM Trim Panel Retainer Toyota'},
+      {pn:'CRX30092',desc:'GM Retainer With Sealer Yellow Nylon'},
+      {pn:'CRX26668',desc:'GM Moulding Clip With Metal Reinforcement Red'},
+      {pn:'CRX26666',desc:'GM Moulding Clip With Metal Reinforcement Blue'},
+      {pn:'CRX28456',desc:'18MM Tail Light Retainer Chrysler'},
+      {pn:'CRX30235',desc:'Ford Moulding Retainer With Sealer White Nylon'},
+      {pn:'CRX470',desc:'25/32 Door Trim Panel Retainer Ford'},
+      {pn:'CRX29474',desc:'15MM Trim Panel Retainer Honda'},
+      {pn:'CRX20530',desc:'18MM Pillar Push-Type Retainer Honda'},
+      {pn:'CRX30198',desc:'Honda Interior Trim Push Type Retainer'},
+      {pn:'CRX18684',desc:'16MM Door Trim Panel Retainer Chry'}
+    ],
+    'Bin 11': [
+      {pn:'CRX16872',desc:'Toyota Scuff Plate Retainer'},
+      {pn:'CRX30055',desc:'Toyota Moulding Clip With Sealer'},
+      {pn:'CRX18324',desc:'18MM Trim Panel Retainer Toyota'},
+      {pn:'CRX30093',desc:'GM Door Panel Retainer'},
+      {pn:'CRX30159',desc:'GM Door Panel Retainer Yellow Nylon'},
+      {pn:'CRX3084',desc:'18MM Door Panel Retainer'},
+      {pn:'CRX12426',desc:'20MM Door Trim Panel Retainer Chrysler'},
+      {pn:'CRX8942',desc:'23/32 Trim Panel Retainer Chrysler'},
+      {pn:'CRX16698',desc:'18MM Trim Panel Retainer Toyota'},
+      {pn:'CRX30092',desc:'GM Retainer With Sealer Yellow Nylon'},
+      {pn:'CRX26668',desc:'GM Moulding Clip With Metal Reinforcement Red'},
+      {pn:'CRX26666',desc:'GM Moulding Clip With Metal Reinforcement Blue'},
+      {pn:'CRX28456',desc:'18MM Tail Light Retainer Chrysler'},
+      {pn:'CRX30235',desc:'Ford Moulding Retainer With Sealer White Nylon'},
+      {pn:'CRX470',desc:'25/32 Door Trim Panel Retainer Ford'},
+      {pn:'CRX29474',desc:'15MM Trim Panel Retainer Honda'},
+      {pn:'CRX20530',desc:'18MM Pillar Push-Type Retainer Honda'},
+      {pn:'CRX30198',desc:'Honda Interior Trim Push Type Retainer'},
+      {pn:'CRX18684',desc:'16MM Door Trim Panel Retainer Chry'},
+      {pn:'CRX30433',desc:'GM Door Trim Applique Clip'}
+    ]
+  }
+};
+
+function todayStr() { return new Date().toISOString().slice(0,10); }
+function initials(n) { return (n||'?').split(' ').map(function(w){return w[0]||'';}).join('').slice(0,2).toUpperCase(); }
+function getWeekKey(ds) { var d=new Date(ds+'T12:00:00'),day=d.getDay(),diff=d.getDate()-day+(day===0?-6:1); return new Date(d.setDate(diff)).toISOString().slice(0,10); }
+function weekLabel(k) { return 'Week of '+new Date(k+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }
+
+function showToast(msg) { var t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(function(){t.classList.remove('show');},2500); }
+
+function showScreen(id) { document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');}); document.getElementById(id).classList.add('active'); window.scrollTo(0,0); }
+
+function goHome() { showScreen('s-home'); loadAccounts(); }
+function gotoCollision() {
+  var a=accounts.find(function(x){return x.id==currentAccountId;});
+  var isD=a&&a.type==='dealership';
+  document.getElementById('loc-section-hdr').textContent=isD?'Shop locations':'Locations';
+  document.getElementById('add-loc-btn').textContent=isD?'+ Add shop location':'+ Add location';
+  showScreen('s-collision'); renderLocationList();
+}
+function gotoAddAccount(type) {
+  currentAddType=type;
+  document.getElementById('add-acct-title').textContent=type==='collision'?'Add collision center':'Add dealership';
+  document.getElementById('collision-note').style.display=type==='collision'?'':'none';
+  document.getElementById('a-name').value=''; document.getElementById('a-contact').value=''; document.getElementById('a-phone').value=''; document.getElementById('a-notes').value='';
+  showScreen('s-add-account');
+}
+function gotoAddLocation() { document.getElementById('l-name').value=''; document.getElementById('l-address').value=''; document.getElementById('l-contact').value=''; document.getElementById('l-phone').value=''; showScreen('s-add-location'); }
+function setFilter(f) { currentFilter=f; document.querySelectorAll('.seg-btn').forEach(function(b,i){b.classList.toggle('active',['all','dealership','collision'][i]===f);}); renderAccountList(); }
+
+function loadAccounts() {
+  sb.from('accounts').select('*').order('created_at').then(function(r){ accounts=r.data||[]; renderAccountList(); });
+}
+
+function renderAccountList() {
+  var list=document.getElementById('account-list');
+  var filtered=currentFilter==='all'?accounts:accounts.filter(function(a){return a.type===currentFilter;});
+  if(!filtered.length){list.innerHTML='<div class="empty">No accounts yet.</div>';return;}
+  list.innerHTML=filtered.map(function(a){
+    var isC=a.type==='collision';
+    var c=isC?collisionColors[a.color_idx%3]:avatarColors[a.color_idx%7];
+    return '<div class="card"><div class="card-row" onclick="'+(isC?'openCollision':'openDealer')+'('+a.id+')">' +
+      '<div class="av '+(isC?'av-sq':'')+'" style="background:'+c.bg+';color:'+c.color+'">'+initials(a.name)+'</div>' +
+      '<div class="ci"><div class="cn">'+a.name+'</div><div class="cm"><span class="pill pill-'+a.type+'">'+(isC?'Collision center':'Dealership')+'</span>'+(a.contact?' &middot; '+a.contact:'')+'</div></div>' +
+      '<span class="chev">&#8250;</span></div></div>';
+  }).join('');
+}
+
+function saveAccount() {
+  var name=document.getElementById('a-name').value.trim(); if(!name){document.getElementById('a-name').focus();return;}
+  var colorIdx=accounts.filter(function(a){return a.type===currentAddType;}).length;
+  sb.from('accounts').insert({name:name,type:currentAddType,color_idx:colorIdx,contact:document.getElementById('a-contact').value.trim(),phone:document.getElementById('a-phone').value.trim(),notes:document.getElementById('a-notes').value.trim()}).select().single().then(function(r){
+    if(r.error){showToast('Error saving');return;}
+    accounts.push(r.data); showToast('Account saved!');
+    if(currentAddType==='collision'){currentAccountId=r.data.id;document.getElementById('collision-title').textContent=r.data.name;gotoCollision();}else goHome();
+  });
+}
+
+function openDealer(id) { currentAccountId=id; currentLocationId=null; currentOrdersBackTarget='home'; var a=accounts.find(function(x){return x.id==id;}); document.getElementById('orders-breadcrumb').textContent=''; document.getElementById('orders-title').textContent=a?a.name:''; document.getElementById('orders-back-btn').textContent='\u2190 All accounts'; setupOrderScreen(); }
+function openCollision(id) { currentAccountId=id; var a=accounts.find(function(x){return x.id==id;}); document.getElementById('collision-title').textContent=a?a.name:''; gotoCollision(); }
+
+function renderLocationList() {
+  var el=document.getElementById('loc-list');
+  el.innerHTML='<div class="loading"><span class="spin"></span>Loading...</div>';
+  sb.from('locations').select('*').eq('account_id',currentAccountId).order('created_at').then(function(r){
+    var locs=r.data||[];
+    if(!locs.length){el.innerHTML='<div class="empty">No locations yet.</div>';return;}
+    el.innerHTML=locs.map(function(l){
+      return '<div class="card"><div class="card-row" onclick="openLocation('+l.id+',\''+l.name.replace(/'/g,"\\'")+'\')">' +
+        '<div class="av av-sq" style="background:#EEEDFE;color:#3C3489;font-size:12px">'+initials(l.name)+'</div>' +
+        '<div class="ci"><div class="cn">'+l.name+'</div><div class="cm">'+(l.address||l.contact||'')+'</div></div>' +
+        '<span class="chev">&#8250;</span></div></div>';
+    }).join('');
+  });
+}
+
+function saveLocation() {
+  var name=document.getElementById('l-name').value.trim(); if(!name){document.getElementById('l-name').focus();return;}
+  sb.from('locations').insert({account_id:currentAccountId,name:name,address:document.getElementById('l-address').value.trim(),contact:document.getElementById('l-contact').value.trim(),phone:document.getElementById('l-phone').value.trim()}).then(function(r){
+    if(r.error){showToast('Error saving location');return;}
+    showToast('Location saved!'); gotoCollision();
+  });
+}
+
+function openLocation(locId,locName) {
+  currentLocationId=locId; currentOrdersBackTarget='collision';
+  var a=accounts.find(function(x){return x.id==currentAccountId;});
+  document.getElementById('orders-breadcrumb').textContent=a?a.name:'';
+  document.getElementById('orders-title').textContent=locName;
+  document.getElementById('orders-back-btn').textContent='\u2190 '+(a?a.name:'Back');
+  setupOrderScreen();
+}
+
+function ordersBack() { if(currentOrdersBackTarget==='collision') gotoCollision(); else goHome(); }
+
+function setupOrderScreen() {
+  document.getElementById('item-date').value=todayStr();
+  document.getElementById('import-date').value=todayStr();
+  resetImport(); document.getElementById('import-text').value='';
+  showScreen('s-orders'); showOrderTab('import');
+}
+
+function showOrderTab(tab) {
+  ['import','add','history','reorder','bins','summary'].forEach(function(t){document.getElementById('otab-'+t).style.display=t===tab?'':'none';});
+  document.querySelectorAll('.tab').forEach(function(el,i){el.classList.toggle('active',['import','add','history','reorder','bins','summary'][i]===tab);});
+  if(tab==='history') renderHistory();
+  if(tab==='summary') renderSummary();
+  if(tab==='reorder') loadReorder();
+  if(tab==='bins') loadBins();
+}
+
+// ─── BINS ───────────────────────────────────────────────────────────────────
+function loadBins() {
+  var locName = document.getElementById('orders-title').textContent.trim();
+  var bins = BIN_DATA[locName];
+  var el = document.getElementById('bins-list');
+  if (!bins) {
+    el.innerHTML = '<div class="empty">No bin data available for this location yet.</div>';
+    return;
+  }
+  renderBins(bins, '');
+}
+
+function filterBins() {
+  var locName = document.getElementById('orders-title').textContent.trim();
+  var bins = BIN_DATA[locName];
+  if (!bins) return;
+  var search = document.getElementById('bins-search').value.trim().toLowerCase();
+  renderBins(bins, search);
+}
+
+function renderBins(bins, search) {
+  var el = document.getElementById('bins-list');
+  var keys = Object.keys(bins).sort(function(a,b){ return parseInt(a.replace('Bin',''))-parseInt(b.replace('Bin','')); });
+  el.innerHTML = keys.map(function(binName) {
+    var items = bins[binName];
+    if (search) items = items.filter(function(p){ return p.pn.toLowerCase().indexOf(search)>=0 || p.desc.toLowerCase().indexOf(search)>=0; });
+    if (!items.length) return '';
+    return '<div style="background:var(--bg2);border-radius:var(--r);padding:10px 14px;margin-bottom:10px">' +
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">' +
+      '<span style="background:var(--purple-bg);color:var(--purple-text);font-size:13px;font-weight:600;padding:3px 12px;border-radius:99px">'+binName+'</span>' +
+      '<span style="color:var(--text2);font-size:12px">'+items.length+' parts</span></div>' +
+      items.map(function(p){
+        return '<div style="padding:6px 0;border-bottom:.5px solid var(--border);font-size:13px">' +
+          '<span style="font-weight:600">'+p.pn+'</span>' +
+          '<span style="color:var(--text2);font-size:12px"> — '+p.desc+'</span></div>';
+      }).join('') + '</div>';
+  }).join('');
+}
+
+// ─── INVOICE PARSER ─────────────────────────────────────────────────────────
+function guessCategory(name) {
+  var n=name.toUpperCase();
+  if(n.indexOf('OIL')>=0||n.indexOf('FLUID')>=0||n.indexOf('GREASE')>=0||n.indexOf('LUBRIC')>=0||n.indexOf('ANTIFREEZE')>=0||n.indexOf('COOLANT')>=0) return 'Fluids';
+  if(n.indexOf('TAPE')>=0||n.indexOf('SPRAYER')>=0||n.indexOf('CLEAN')>=0||n.indexOf('WASH')>=0||n.indexOf('POLISH')>=0) return 'Cleaning';
+  if(n.indexOf('GLOVE')>=0||n.indexOf('EYEWEAR')>=0||n.indexOf('GOGGLE')>=0||n.indexOf('SAFETY')>=0||n.indexOf('SHIELD')>=0) return 'Safety';
+  if(n.indexOf('WRENCH')>=0||n.indexOf('SOCKET')>=0||n.indexOf('PLIER')>=0||n.indexOf('TOOL')>=0||n.indexOf('DRILL')>=0) return 'Tools';
+  if(n.indexOf('BOLT')>=0||n.indexOf('SCREW')>=0||n.indexOf('WASHER')>=0||n.indexOf('NUT')>=0||n.indexOf('CLAMP')>=0||n.indexOf('CLIP')>=0||n.indexOf('RETAINER')>=0||n.indexOf('NIPPLE')>=0||n.indexOf('CONNECT')>=0) return 'Parts';
+  return 'Other';
+}
+
+function parseInvoiceText(text) {
+  var lines=text.split('\n').map(function(l){return l.trim();}).filter(function(l){return l.length>0;});
+  var items=[]; var skipStarts=['Items Ordered','Product Name','SKU','UOM','Price','Qty','Subtotal','Shipping','Estimated','Total','EA','PKG'];
+  var i=0;
+  while(i<lines.length){
+    var line=lines[i]; var skip=false;
+    for(var s=0;s<skipStarts.length;s++){if(line.indexOf(skipStarts[s])===0){skip=true;break;}}
+    if(skip){i++;continue;}
+    if(line.charAt(0)==='$'){i++;continue;}
+    if(line.indexOf('Ordered')===0){i++;continue;}
+    var isSkuLine=/^[A-Z]{2,8}[0-9]/.test(line)&&line.split('\t').length<=3&&line.split(' ').length<=3;
+    if(isSkuLine){i++;continue;}
+    var isUpper=line===line.toUpperCase()&&line.length>4&&/[A-Z]/.test(line);
+    if(isUpper){
+      var name=line; var price=0; var qty=1; var sku='';
+      for(var j=i+1;j<Math.min(i+10,lines.length);j++){
+        var l2=lines[j];
+        if(l2.charAt(0)==='$'&&price===0){var p=parseFloat(l2.replace('$',''));if(!isNaN(p)&&p>0)price=p;}
+        if(l2.indexOf('Ordered')===0){var q=parseInt(l2.replace('Ordered',''));if(!isNaN(q))qty=q;}
+        if(!sku&&/^[A-Z]{2,8}[0-9]/i.test(l2)&&l2.split(' ').length<=3){sku=l2.split('\t')[0].trim();}
+      }
+      if(price>0){items.push({name:name,sku:sku,qty:qty,price:price,category:guessCategory(name)});i++;var skipped=0;while(i<lines.length&&skipped<8){if(lines[i].indexOf('Ordered')===0){i++;break;}i++;skipped++;}continue;}
+    }
+    i++;
+  }
+  return items;
+}
+
+function parseImport() {
+  var text=document.getElementById('import-text').value.trim(); if(!text) return;
+  document.getElementById('import-paste-view').style.display='none';
+  document.getElementById('import-loading').style.display='';
+  parsedItems=parseInvoiceText(text);
+  document.getElementById('import-loading').style.display='none';
+  if(!parsedItems.length){document.getElementById('import-paste-view').style.display='';showToast('No items found. Try again.');return;}
+  document.getElementById('import-preview').style.display='';
+  document.getElementById('preview-list').innerHTML=parsedItems.map(function(item,i){
+    return '<div class="pi"><input type="checkbox" id="chk-'+i+'" checked style="width:16px;height:16px;cursor:pointer;flex-shrink:0;accent-color:var(--blue)"/>' +
+      '<span class="pn">'+item.name+'</span><span class="badge badge-'+item.category+'">'+item.category+'</span>' +
+      (item.sku?'<span style="color:var(--text3);font-size:11px">'+item.sku+'</span>':'')+
+      '<span style="color:var(--text2);white-space:nowrap">x'+item.qty+'</span>' +
+      '<span style="color:var(--blue);white-space:nowrap">$'+(item.qty*item.price).toFixed(2)+'</span></div>';
+  }).join('');
+}
+
+function confirmImport() {
+  var date=document.getElementById('import-date').value||todayStr();
+  var rows=[];
+  parsedItems.forEach(function(item,i){var c=document.getElementById('chk-'+i);if(c&&c.checked)rows.push({account_id:currentAccountId,location_id:currentLocationId||null,name:item.name,category:item.category,quantity:item.qty,price:item.price,order_date:date,notes:item.sku||''}); });
+  if(!rows.length) return;
+  sb.from('orders').insert(rows).then(function(r){if(r.error){showToast('Error saving orders');return;}showToast(rows.length+' items imported!');resetImport();document.getElementById('import-text').value='';showOrderTab('history');});
+}
+
+function resetImport() { document.getElementById('import-preview').style.display='none'; document.getElementById('import-loading').style.display='none'; document.getElementById('import-paste-view').style.display=''; }
+
+function addOrder() {
+  var name=document.getElementById('item-name').value.trim(); if(!name){document.getElementById('item-name').focus();return;}
+  sb.from('orders').insert({account_id:currentAccountId,location_id:currentLocationId||null,name:name,category:document.getElementById('item-cat').value,quantity:parseFloat(document.getElementById('item-qty').value)||1,price:parseFloat(document.getElementById('item-price').value)||0,order_date:document.getElementById('item-date').value||todayStr(),notes:document.getElementById('item-notes').value.trim()}).then(function(r){
+    if(r.error){showToast('Error saving');return;}
+    showToast('Order saved!');
+    document.getElementById('item-name').value=''; document.getElementById('item-qty').value=''; document.getElementById('item-price').value=''; document.getElementById('item-notes').value='';
+    showOrderTab('history');
+  });
+}
+
+function fetchOrders(cb) {
+  var q=sb.from('orders').select('*').eq('account_id',currentAccountId);
+  if(currentLocationId) q=q.eq('location_id',currentLocationId);
+  q.order('order_date',{ascending:false}).then(function(r){currentOrders=r.data||[];cb(currentOrders);});
+}
+
+function setHistoryView(view) {
+  currentHistoryView=view;
+  document.getElementById('view-btn-date').classList.toggle('active',view==='date');
+  document.getElementById('view-btn-item').classList.toggle('active',view==='item');
+  renderHistory();
+}
+
+function renderHistory() {
+  var el=document.getElementById('history-list');
+  el.innerHTML='<div class="loading"><span class="spin"></span>Loading...</div>';
+  fetchOrders(function(orders){
+    var fc=document.getElementById('filter-cat').value;
+    var search=document.getElementById('history-search').value.trim().toLowerCase();
+    if(fc) orders=orders.filter(function(o){return o.category===fc;});
+    if(search) orders=orders.filter(function(o){return o.name.toLowerCase().indexOf(search)>=0||(o.notes&&o.notes.toLowerCase().indexOf(search)>=0);});
+    if(!orders.length){el.innerHTML='<div class="empty">No orders found.</div>';return;}
+    if(currentHistoryView==='date'){
+      var grouped={};
+      orders.forEach(function(o){var d=o.order_date;if(!grouped[d])grouped[d]=[];grouped[d].push(o);});
+      el.innerHTML=Object.keys(grouped).sort(function(a,b){return b.localeCompare(a);}).map(function(d){
+        var label=new Date(d+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
+        return '<div class="wl">'+label+'</div>'+grouped[d].map(function(o){return orderCard(o,false);}).join('')+'<hr class="div">';
+      }).join('');
+    } else {
+      var byItem={};
+      orders.forEach(function(o){if(!byItem[o.name])byItem[o.name]={category:o.category,notes:o.notes,orders:[]};byItem[o.name].orders.push(o);});
+      el.innerHTML=Object.keys(byItem).sort().map(function(name){
+        var d=byItem[name];
+        var tq=d.orders.reduce(function(s,o){return s+o.quantity;},0);
+        var ts=d.orders.reduce(function(s,o){return s+o.quantity*o.price;},0);
+        return '<div style="background:var(--bg2);border-radius:var(--r);padding:10px 14px;margin-bottom:8px">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-weight:600;font-size:14px">'+name+'</span><span class="badge badge-'+d.category+'">'+d.category+'</span></div>' +
+          (d.notes?'<div style="font-size:11px;color:var(--text3);margin-bottom:6px">'+d.notes+'</div>':'')+
+          '<div style="font-size:12px;color:var(--text2);margin-bottom:8px">Ordered '+d.orders.length+' time(s) &middot; '+tq+' units &middot; $'+ts.toFixed(2)+'</div>' +
+          '<div style="border-top:.5px solid var(--border);padding-top:6px">'+
+          d.orders.map(function(o){return '<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:.5px solid var(--border)"><span>'+new Date(o.order_date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})+'</span><span style="color:var(--text2)">x'+o.quantity+' &nbsp; $'+(o.quantity*o.price).toFixed(2)+'</span></div>';}).join('')+
+          '</div></div>';
+      }).join('');
+    }
+  });
+}
+
+function orderCard(o, showDate) {
+  return '<div class="oc"><div class="oh"><span class="on">'+o.name+'</span>' +
+    '<span style="display:flex;gap:6px;align-items:center"><span class="op">$'+(o.quantity*o.price).toFixed(2)+'</span><button class="del" onclick="deleteOrder('+o.id+')">&#10005;</button></span></div>' +
+    '<div class="om"><span class="badge badge-'+o.category+'">'+o.category+'</span><span>x'+o.quantity+'</span><span>$'+parseFloat(o.price).toFixed(2)+' ea</span>' +
+    (showDate?'<span>'+new Date(o.order_date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'})+'</span>':'')+
+    (o.notes?'<span style="color:var(--text3);font-size:11px">'+o.notes+'</span>':'')+
+    '</div></div>';
+}
+
+function deleteOrder(id) { sb.from('orders').delete().eq('id',id).then(function(r){if(r.error){showToast('Error deleting');return;}showToast('Deleted');renderHistory();}); }
+
+function loadReorder() {
+  fetchOrders(function(orders){
+    if(!orders.length){document.getElementById('reorder-list').innerHTML='<div class="empty">Import some orders first.</div>';return;}
+    document.getElementById('reorder-loading').style.display=''; document.getElementById('reorder-list').innerHTML='';
+    var summary={};
+    orders.forEach(function(o){if(!summary[o.name])summary[o.name]={cat:o.category,totalQty:0,weeks:{},price:o.price};summary[o.name].totalQty+=o.quantity;summary[o.name].weeks[getWeekKey(o.order_date)]=true;summary[o.name].price=o.price;});
+    var hist=Object.keys(summary).map(function(n){var d=summary[n];return n+' ('+d.cat+'): '+d.totalQty+' units over '+Object.keys(d.weeks).length+' week(s), $'+parseFloat(d.price).toFixed(2)+'/unit';}).join('\n');
+    var prompt='You are a supply ordering assistant for an automotive sales rep. Based on this order history, suggest reorder quantities for the next weekly visit. Return ONLY a JSON array, each: {name, suggestedQty, reason, priority} where priority is high/medium/low. No markdown.\n\n'+hist;
+    fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]})})
+    .then(function(r){return r.json();}).then(function(data){
+      var sugg=JSON.parse(data.content.map(function(i){return i.text||'';}).join('').replace(/```json|```/g,'').trim());
+      document.getElementById('reorder-loading').style.display='none';
+      var pc={high:{bg:'var(--red-bg)',color:'var(--red-text)'},medium:{bg:'var(--amber-bg)',color:'var(--amber-text)'},low:{bg:'var(--green-bg)',color:'var(--green-text)'}};
+      document.getElementById('reorder-list').innerHTML=sugg.map(function(s){
+        var p=pc[s.priority]||pc.low;
+        return '<div class="rc"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:14px;font-weight:600">'+s.name+'</span><span style="display:flex;gap:6px;align-items:center"><span style="font-size:13px;font-weight:600">x'+s.suggestedQty+'</span><span style="font-size:10px;padding:2px 8px;border-radius:99px;background:'+p.bg+';color:'+p.color+'">'+s.priority+'</span></span></div><div style="font-size:12px;color:var(--text2);margin-top:4px">'+s.reason+'</div></div>';
+      }).join('');
+    }).catch(function(){document.getElementById('reorder-loading').style.display='none';document.getElementById('reorder-list').innerHTML='<div class="empty">Could not load. Try again.</div>';});
+  });
+}
+
+function renderSummary() {
+  fetchOrders(function(orders){
+    var total=orders.reduce(function(s,o){return s+o.quantity*o.price;},0);
+    var wt=orders.filter(function(o){return getWeekKey(o.order_date)===getWeekKey(todayStr());}).reduce(function(s,o){return s+o.quantity*o.price;},0);
+    document.getElementById('stats-grid').innerHTML='<div class="stat"><div class="stat-l">Total spent</div><div class="stat-v">$'+total.toFixed(2)+'</div></div><div class="stat"><div class="stat-l">This week</div><div class="stat-v">$'+wt.toFixed(2)+'</div></div><div class="stat"><div class="stat-l">Orders</div><div class="stat-v">'+orders.length+'</div></div><div class="stat"><div class="stat-l">Weeks tracked</div><div class="stat-v">'+(function(){var w={};orders.forEach(function(o){w[getWeekKey(o.order_date)]=true;});return Object.keys(w).length;})()+'</div></div>';
+    var totals={};
+    orders.forEach(function(o){if(!totals[o.name])totals[o.name]={count:0,spend:0};totals[o.name].count+=o.quantity;totals[o.name].spend+=o.quantity*o.price;});
+    var top=Object.keys(totals).sort(function(a,b){return totals[b].count-totals[a].count;}).slice(0,5);
+    document.getElementById('top-items').innerHTML=top.length?'<div class="sh">Most ordered items</div>'+top.map(function(n){return '<div class="oc" style="padding:10px 14px;margin-bottom:6px"><div style="display:flex;justify-content:space-between"><span style="font-size:14px;font-weight:600">'+n+'</span><span style="font-size:12px;color:var(--text2)">x'+totals[n].count+' &middot; $'+totals[n].spend.toFixed(2)+'</span></div></div>';}).join(''):'';
+  });
+}
+
+// ─── PARTS ──────────────────────────────────────────────────────────────────
+function gotoParts() { showScreen('s-parts'); setPartsView('search'); }
+
+function setPartsView(view) {
+  document.getElementById('parts-search-view').style.display=view==='search'?'':'none';
+  document.getElementById('parts-saved-view').style.display=view==='saved'?'':'none';
+  document.getElementById('parts-btn-search').classList.toggle('active',view==='search');
+  document.getElementById('parts-btn-saved').classList.toggle('active',view==='saved');
+  if(view==='saved') loadSavedParts();
+}
+
+async function searchParts() {
+  var query=document.getElementById('parts-search-input').value.trim(); if(!query) return;
+  var el=document.getElementById('parts-search-results');
+  el.innerHTML='<div class="loading"><span class="spin"></span>Searching Crest Industries...</div>';
+  try {
+    var res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1500,tools:[{"type":"web_search_20250305","name":"web_search"}],messages:[{role:'user',content:'Search crestindustries.com for: '+query+'. Return a JSON array of up to 5 matching products with fields: part_number, description, category, oem_numbers, url. Only return the JSON array, no markdown.'}]})});
+    var data=await res.json();
+    var text=data.content.map(function(i){return i.text||'';}).join('');
+    var clean=text.replace(/```json|```/g,'').trim();
+    var idx=clean.indexOf('['); if(idx>=0) clean=clean.slice(idx);
+    var results=[]; try{results=JSON.parse(clean);}catch(e){results=[];}
+    if(!results.length){el.innerHTML='<div class="empty">No results found.<br>Try a different search term.</div><button class="btn" style="margin-top:8px" onclick="openAddPart()">+ Add manually</button>';return;}
+    el.innerHTML=results.map(function(r){
+      var rStr=JSON.stringify(r).replace(/'/g,"\\x27");
+      return '<div class="card" style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px"><span style="font-weight:600;font-size:15px">'+(r.part_number||'')+'</span><span class="pill pill-dealership">'+(r.category||'Fasteners')+'</span></div><div style="font-size:13px;margin-bottom:6px">'+(r.description||'')+'</div>'+(r.oem_numbers?'<div style="font-size:12px;color:var(--text2);margin-bottom:6px">OEM: '+r.oem_numbers+'</div>':'')+
+      '<div style="display:flex;gap:8px">'+(r.url?'<a href="'+r.url+'" target="_blank" style="flex:1;text-align:center;padding:8px;font-size:12px;border:.5px solid var(--border2);border-radius:var(--r);color:var(--blue);text-decoration:none">View on Crest &#8599;</a>':'')+
+      '<button onclick=\'openAddPartFromResult('+rStr+')\' class="btn btn-p" style="flex:1;margin-top:0;font-size:12px;padding:8px">+ Save</button></div></div>';
+    }).join('')+'<button class="btn" style="margin-top:4px" onclick="openAddPart()">+ Add manually</button>';
+  } catch(e) { el.innerHTML='<div class="empty">Search failed. Try again.</div>'; }
+}
+
+function openAddPartFromResult(r) { editingPartId=null; document.getElementById('add-part-title').textContent='Save part'; document.getElementById('p-number').value=r.part_number||''; document.getElementById('p-desc').value=r.description||''; document.getElementById('p-oem').value=r.oem_numbers||''; document.getElementById('p-notes').value=''; document.getElementById('p-source').value='Crest Industries'; showScreen('s-add-part'); }
+function openAddPart() { editingPartId=null; document.getElementById('add-part-title').textContent='Save part'; document.getElementById('p-number').value=''; document.getElementById('p-desc').value=''; document.getElementById('p-oem').value=''; document.getElementById('p-notes').value=''; document.getElementById('p-source').value='Crest Industries'; showScreen('s-add-part'); }
+function openEditPart(p) { editingPartId=p.id; document.getElementById('add-part-title').textContent='Edit part'; document.getElementById('p-number').value=p.part_number||''; document.getElementById('p-desc').value=p.description||''; document.getElementById('p-cat').value=p.category||'Other'; document.getElementById('p-oem').value=p.oem_numbers||''; document.getElementById('p-notes').value=p.notes||''; document.getElementById('p-source').value=p.source||'Crest Industries'; showScreen('s-add-part'); }
+
+async function savePart() {
+  var pn=document.getElementById('p-number').value.trim(); if(!pn){document.getElementById('p-number').focus();return;}
+  var data={part_number:pn,description:document.getElementById('p-desc').value.trim(),category:document.getElementById('p-cat').value,oem_numbers:document.getElementById('p-oem').value.trim(),notes:document.getElementById('p-notes').value.trim(),source:document.getElementById('p-source').value.trim()||'Crest Industries'};
+  var r; if(editingPartId){r=await sb.from('parts').update(data).eq('id',editingPartId);}else{r=await sb.from('parts').insert(data);}
+  if(r.error){showToast('Error saving');return;}
+  showToast(editingPartId?'Part updated!':'Part saved!'); showScreen('s-parts'); setPartsView('saved');
+}
+
+async function loadSavedParts() {
+  var el=document.getElementById('parts-saved-list');
+  el.innerHTML='<div class="loading"><span class="spin"></span>Loading...</div>';
+  var r=await sb.from('parts').select('*').order('part_number');
+  savedParts=r.data||[]; renderSavedParts(savedParts);
+}
+
+function filterSavedParts() {
+  var s=document.getElementById('parts-db-search').value.trim().toLowerCase();
+  renderSavedParts(s?savedParts.filter(function(p){return(p.part_number&&p.part_number.toLowerCase().indexOf(s)>=0)||(p.description&&p.description.toLowerCase().indexOf(s)>=0)||(p.oem_numbers&&p.oem_numbers.toLowerCase().indexOf(s)>=0)||(p.notes&&p.notes.toLowerCase().indexOf(s)>=0);}):savedParts);
+}
+
+function renderSavedParts(parts) {
+  var el=document.getElementById('parts-saved-list');
+  if(!parts.length){el.innerHTML='<div class="empty">No parts saved yet.<br>Use Search to find and save parts.</div>';return;}
+  var grouped={};
+  parts.forEach(function(p){var c=p.category||'Other';if(!grouped[c])grouped[c]=[];grouped[c].push(p);});
+  el.innerHTML=Object.keys(grouped).sort().map(function(cat){
+    return '<div style="font-size:12px;font-weight:600;color:var(--text2);margin:12px 0 6px">'+cat+' ('+grouped[cat].length+')</div>'+
+      grouped[cat].map(function(p){
+        var pStr=JSON.stringify(p).replace(/'/g,"\\x27");
+        return '<div class="card" style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px"><span style="font-weight:600;font-size:14px">'+p.part_number+'</span><span style="display:flex;gap:6px;align-items:center"><button class="del" onclick=\'openEditPart('+pStr+')\' style="font-size:14px">&#9998;</button><button class="del" onclick="deletePart('+p.id+')">&#10005;</button></span></div>'+(p.description?'<div style="font-size:13px;margin-bottom:3px">'+p.description+'</div>':'')+(p.oem_numbers?'<div style="font-size:12px;color:var(--text2)">OEM: '+p.oem_numbers+'</div>':'')+(p.notes?'<div style="font-size:12px;color:var(--text2);margin-top:2px">'+p.notes+'</div>':'')+'</div>';
+      }).join('');
+  }).join('');
+}
+
+async function deletePart(id) { var r=await sb.from('parts').delete().eq('id',id); if(r.error){showToast('Error deleting');return;} showToast('Deleted'); loadSavedParts(); }
+
+loadAccounts();
+</script>
+</body>
+</html>
